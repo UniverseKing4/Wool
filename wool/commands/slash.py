@@ -6,13 +6,12 @@ the REPL) or ``True`` (exit the REPL).
 
 from __future__ import annotations
 
-import shlex
 from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from wool.config import ProviderConfig
 from wool.providers import OpenAICompatProvider
 from wool.utils.ansi import (
-    bold, cyan, dim, gray, green, magenta, red, yellow, white,
+    bold, cyan, dim, green, magenta, red, white,
     info, error as ansi_error, success, warning,
 )
 
@@ -146,8 +145,8 @@ class SlashCommandHandler:
                 )
                 if self.agent.active_provider:
                     self.agent.config.active_provider = self.agent.active_provider.name
-                    pc = self.agent.config.providers.get(self.agent.active_provider.name)
-                    self.agent.active_model = pc.default_model if pc else None
+                    prov_cfg = self.agent.config.providers.get(self.agent.active_provider.name)
+                    self.agent.active_model = prov_cfg.default_model if prov_cfg else None
                 else:
                     self.agent.config.active_provider = None
                     self.agent.active_model = None
@@ -255,8 +254,8 @@ class SlashCommandHandler:
             print(f"    {green(t.name):>30s}  {dim(t.description[:60])}")
         if mcp_tools:
             print(f"\n  {bold('MCP tools')} ({len(mcp_tools)}):")
-            for t in mcp_tools:
-                fn = t.get("function", {})
+            for mcp_t in mcp_tools:
+                fn = mcp_t.get("function", {})
                 print(f"    {magenta(fn.get('name', '?')):>30s}  {dim(fn.get('description', '')[:60])}")
         print()
         return False
@@ -508,7 +507,9 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         current_ctx = 0
         for msg in reversed(self.agent.messages):
             if msg.role == "assistant" and getattr(msg, "usage", None):
-                current_ctx = msg.usage.get("prompt_tokens", 0) + msg.usage.get("completion_tokens", 0)
+                usage = msg.usage
+                if usage:
+                    current_ctx = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
                 break
         
         print()
@@ -526,7 +527,8 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
 
     async def _context(self, _args: str) -> bool:
         def est_tokens(text: str | None) -> int:
-            if not text: return 0
+            if not text:
+                return 0
             return max(1, len(text) // 4)
             
         import json
@@ -545,7 +547,9 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
                 agent_resp += est_tokens(msg.content)
                 if getattr(msg, "tool_calls", None):
                     try:
-                        tool_calls += est_tokens(json.dumps([tc.to_dict() for tc in msg.tool_calls]))
+                        tc_list = msg.tool_calls
+                        if tc_list:
+                            tool_calls += est_tokens(json.dumps([tc.to_dict() for tc in tc_list]))
                     except Exception:
                         pass
             elif msg.role == "tool":
@@ -570,7 +574,7 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
             subagents = 0
             
         try:
-            mcp_tools = est_tokens(json.dumps([t.to_openai_schema() for t in self.agent.mcp_manager.get_tools()]))
+            mcp_tools = est_tokens(json.dumps(self.agent.mcp_manager.get_all_tools()))
         except Exception:
             mcp_tools = 0
             
@@ -605,10 +609,14 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         others = [m for m in msgs if m.role != "system"]
         
         def is_real_user(m):
-            if m.role != "user": return False
-            if not m.content: return True
-            if "Tool execution complete. Please continue" in m.content: return False
-            if "The background subagents have finished. Here are their final results:" in m.content: return False
+            if m.role != "user":
+                return False
+            if not m.content:
+                return True
+            if "Tool execution complete. Please continue" in m.content:
+                return False
+            if "The background subagents have finished. Here are their final results:" in m.content:
+                return False
             return True
             
         # Find real user message indices
@@ -650,9 +658,14 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         from wool.providers.base import ChatMessage
         temp_msgs = system + [ChatMessage(role="user", content=summary_prompt)]
         
+        if not self.agent.active_provider:
+            ansi_error("No active provider.")
+            return False
+            
+        model = self.agent.active_model or "auto"
         try:
             summary_text = ""
-            async for ev in self.agent.active_provider.chat_completion_stream(temp_msgs, self.agent.active_model):
+            async for ev in self.agent.active_provider.chat_completion_stream(temp_msgs, model):
                 if ev.type == "text":
                     summary_text += ev.content
                     
@@ -755,7 +768,6 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
             
         import sys
         import base64
-        import os
         
         # 1. Try OSC 52 (works over SSH/Codespaces)
         try:
@@ -770,7 +782,7 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         try:
             import pyperclip
             pyperclip.copy(last_msg)
-        except Exception as e:
+        except Exception:
             # We don't print the pyperclip error anymore because OSC 52 likely succeeded 
             # if they are in a terminal that supports it, or if they are headless they don't care.
             pass

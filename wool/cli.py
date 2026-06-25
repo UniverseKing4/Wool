@@ -25,7 +25,6 @@ from wool.utils.ansi import (
     green,
     white,
     yellow,
-    gray,
 )
 from wool.utils.streaming import StreamPrinter
 
@@ -96,17 +95,19 @@ async def run_repl() -> None:
             
     readline.set_pre_input_hook(_pre_input_hook)
     readline.parse_and_bind("set disable-completion on")
-    from collections import deque
-    typeahead_buffer: deque[str] = deque()
 
     auto_next_text = None
     
     while True:
         def is_real_user(m):
-            if m.role != "user": return False
-            if not m.content: return True
-            if "Tool execution complete. Please continue" in m.content: return False
-            if "The background subagents have finished. Here are their final results:" in m.content: return False
+            if m.role != "user":
+                return False
+            if not m.content:
+                return True
+            if "Tool execution complete. Please continue" in m.content:
+                return False
+            if "The background subagents have finished. Here are their final results:" in m.content:
+                return False
             return True
         turn = sum(1 for m in agent.messages if is_real_user(m)) + 1
         
@@ -196,8 +197,10 @@ async def run_repl() -> None:
                         wait_think = asyncio.create_task(is_thinking.wait())
                         wait_cancel = asyncio.create_task(cancel_event.wait())
                         await asyncio.wait([wait_think, wait_cancel], return_when=asyncio.FIRST_COMPLETED)
-                        if not wait_think.done(): wait_think.cancel()
-                        if not wait_cancel.done(): wait_cancel.cancel()
+                        if not wait_think.done():
+                            wait_think.cancel()
+                        if not wait_cancel.done():
+                            wait_cancel.cancel()
             except asyncio.CancelledError:
                 pass
             finally:
@@ -215,10 +218,10 @@ async def run_repl() -> None:
             last_chunk_type = None
             start_time = time.time()
             iterator = agent.process_input(text).__aiter__()
-            next_task = None
+            next_task: asyncio.Task[tuple[str, str]] | None = None
             try:
                 while True:
-                    next_task = asyncio.create_task(iterator.__anext__())
+                    next_task = asyncio.create_task(iterator.__anext__())  # type: ignore
                     cancel_wait = asyncio.create_task(cancel_event.wait())
                     
                     done, _ = await asyncio.wait(
@@ -302,7 +305,8 @@ async def run_repl() -> None:
                     except Exception:
                         pass
                 try:
-                    await iterator.aclose()
+                    if hasattr(iterator, "aclose"):
+                        await iterator.aclose()
                 except Exception:
                     pass
                 if has_reasoned and not transitioned:

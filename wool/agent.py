@@ -6,6 +6,7 @@ Implements the full agentic loop:
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, AsyncIterator
 
@@ -16,7 +17,6 @@ from wool.providers import (
     OpenAICompatProvider,
     Provider,
     ProviderRegistry,
-    StreamEvent,
     ToolCall,
 )
 from wool.tools import ToolRegistry
@@ -27,7 +27,7 @@ from wool.tools.fs_write import FileSystemWrite
 from wool.tools.subagent import SubagentDelegation
 from wool.tools.web_fetch import WebFetch
 from wool.tools.web_search import WebSearch
-from wool.utils.ansi import bold, cyan, dim, green, red, yellow
+from wool.utils.ansi import bold, cyan, dim, red, yellow
 
 SYSTEM_PROMPT = """\
 You are Wool, a powerful AI coding assistant running in a Linux terminal.
@@ -58,6 +58,7 @@ class WoolAgent:
         self.active_provider: Provider | None = None
         self.active_model: str | None = config.active_model
         self.total_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        self._active_bg_tasks: list[asyncio.Task[Any]] = []
 
         self._setup_tools()
         self._setup_providers()
@@ -94,9 +95,9 @@ class WoolAgent:
             self.active_provider = self.provider_registry.get(first_name)
             
         if self.active_provider:
-            pc = self.config.providers.get(self.active_provider.name)
-            if pc and pc.default_model:
-                self.active_model = pc.default_model
+            prov_cfg = self.config.providers.get(self.active_provider.name)
+            if prov_cfg and prov_cfg.default_model:
+                self.active_model = prov_cfg.default_model
 
     # ── system message ────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ class WoolAgent:
                     
                     combined_result = []
                     for i, res in enumerate(results):
-                        if isinstance(res, Exception):
+                        if isinstance(res, BaseException):
                             combined_result.append(f"Subagent {i+1} failed: {res}")
                         else:
                             bg_tc, bg_res = res
@@ -299,12 +300,12 @@ class WoolAgent:
                 yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
 
                 try:
-                    args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
+                    tc_args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
                 except json.JSONDecodeError:
-                    args = {}
+                    tc_args = {}
 
-                if args:
-                    args_fmt = json.dumps(args, indent=2)
+                if tc_args:
+                    args_fmt = json.dumps(tc_args, indent=2)
                     yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
                     for line in args_fmt.splitlines():
                         yield "tool", f"  {dim('│')} {line}\r\n"
@@ -371,6 +372,7 @@ class WoolAgent:
         yield "text", "\n" + yellow("⚠ Reached maximum tool iterations.") + "\n"
 
     # ── session management ────────────────────────────────────────────────
+    from pathlib import Path
 
     def get_session_path(self, session_name: str | None = None) -> Path:
         name = session_name or self.config.active_session
@@ -411,6 +413,7 @@ class WoolAgent:
     async def shutdown(self) -> None:
         self.save_session()
         if hasattr(self, "_active_bg_tasks"):
+            import asyncio
             for t in self._active_bg_tasks:
                 if not t.done():
                     t.cancel()

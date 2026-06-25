@@ -6,7 +6,6 @@ import asyncio
 import base64
 import mimetypes
 import os
-import stat
 from pathlib import Path
 from typing import Any
 
@@ -112,7 +111,7 @@ class FileSystemRead(Tool):
         except Exception as exc:
             return ToolResult(success=False, output="", error=str(exc))
 
-        numbered = [f"{start + i:>6} │ {l.rstrip()}" for i, l in enumerate(selected)]
+        numbered = [f"{start + i:>6} │ {line.rstrip()}" for i, line in enumerate(selected)]
         text = "\n".join(numbered)
         if truncated:
             text += f"\n... (truncated at {MAX_FILE_LINES} lines)"

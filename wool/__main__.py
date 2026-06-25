@@ -5,7 +5,7 @@ import sys
 
 
 def main() -> None:
-    from wool.cli import run_repl  # noqa: delayed import
+    from wool.cli import run_repl
 
     try:
         asyncio.run(run_repl())

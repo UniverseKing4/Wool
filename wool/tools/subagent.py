@@ -67,7 +67,6 @@ class SubagentDelegation(Tool):
 
         from wool.config import WoolConfig
         from wool.agent import WoolAgent
-        from wool.providers.base import ChatMessage
         import uuid
 
         sub_config = WoolConfig.load()

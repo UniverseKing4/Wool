@@ -131,7 +131,7 @@ class CodeIntelligence(Tool):
         for i, line in enumerate(text.splitlines(), 1):
             m = pat.search(line)
             if m:
-                sym = m.group(m.lastindex or 0)
+                # sym = m.group(m.lastindex or 0)
                 symbols.append(f"  {i:>5} │ {line.strip()}")
 
         if not symbols:

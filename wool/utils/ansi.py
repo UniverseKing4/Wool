@@ -83,8 +83,7 @@ def gray(text: str) -> str:
     return style(text, FG_GRAY)
 
 
-def gray(text: str) -> str:
-    return style(text, FG_GRAY)
+
 
 
 # ── Message printers (write directly to stdout) ──────────────────────────────

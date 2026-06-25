@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 
-from wool.utils.markdown import render_markdown
 
 
 class StreamPrinter:
@@ -76,11 +75,10 @@ class StreamPrinter:
             sys.stdout.flush()
             return
 
-        import re
         from wool.utils.markdown import (
-            _FENCE_RE, _HEADING_RE, _TABLE_SEP_RE, _BLOCKQUOTE_RE, 
+            _FENCE_RE, _HEADING_RE, _BLOCKQUOTE_RE, 
             _ULIST_RE, _OLIST_RE, _HR_RE, _style_inline, _LIST_BULLETS,
-            _a, _DIM, _RST, _FG_WHITE, _BG_GRAY, _FG_CYAN, _FG_GREEN, _ITALIC,
+            _a, _DIM, _RST, _BG_GRAY, _FG_CYAN, _FG_GREEN, _ITALIC,
             _HEADING_COLORS
         )
         

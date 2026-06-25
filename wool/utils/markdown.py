@@ -124,7 +124,6 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
         # ── fenced code block ─────────────────────────────────────────
         fence_m = _FENCE_RE.match(line)
         if fence_m:
-            indent = fence_m.group(1)
             fence_char = fence_m.group(2)
             lang = fence_m.group(3).strip()
             i += 1
@@ -232,12 +231,9 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
 def _render_table(lines: list[str]) -> list[str]:
     """Render a GFM pipe table with aligned columns."""
     rows: list[list[str]] = []
-    separator_idx: int | None = None
-
     for idx, line in enumerate(lines):
         stripped = line.strip()
         if _TABLE_SEP_RE.match(stripped):
-            separator_idx = idx
             continue
         cells = [c.strip() for c in stripped.strip("|").split("|")]
         rows.append(cells)
@@ -268,17 +264,17 @@ def _render_table(lines: list[str]) -> list[str]:
 
         if ri == 0:
             # Top border
-            border = f"  {_a(_DIM)}┌─" + f"─┬─".join("─" * w for w in col_widths) + f"─┐{_a(_RST)}"
+            border = f"  {_a(_DIM)}┌─" + "─┬─".join("─" * w for w in col_widths) + f"─┐{_a(_RST)}"
             out.append(border)
             out.append(line_str)
             # Header separator
-            sep = f"  {_a(_DIM)}├─" + f"─┼─".join("─" * w for w in col_widths) + f"─┤{_a(_RST)}"
+            sep = f"  {_a(_DIM)}├─" + "─┼─".join("─" * w for w in col_widths) + f"─┤{_a(_RST)}"
             out.append(sep)
         else:
             out.append(line_str)
 
     # Bottom border
-    border = f"  {_a(_DIM)}└─" + f"─┴─".join("─" * w for w in col_widths) + f"─┘{_a(_RST)}"
+    border = f"  {_a(_DIM)}└─" + "─┴─".join("─" * w for w in col_widths) + f"─┘{_a(_RST)}"
     out.append(border)
     return out
 

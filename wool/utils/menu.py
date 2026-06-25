@@ -3,7 +3,7 @@ import sys
 import select
 import termios
 import tty
-from typing import Callable
+
 from wool.utils.ansi import bold, cyan, dim, green, red, white
 
 def run_session_menu(sessions: list[str], active_session: str, initial_idx: int = -1) -> tuple[str, str, int] | None:
@@ -95,16 +95,16 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
             
             if ch == '\x03' or ch.lower() == 'q':  # Ctrl+C or q
-                sys.stdout.write(f"\r\033[K\r\n")
+                sys.stdout.write("\r\033[K\r\n")
                 return None
                 
             elif ch == '\r' or ch == '\n':  # Enter
-                sys.stdout.write(f"\r\033[K\r\n")
+                sys.stdout.write("\r\033[K\r\n")
                 return "switch", sessions[selected_idx], selected_idx
                 
             elif ch.lower() == 'd':
                 if delete_confirm_idx == selected_idx:
-                    sys.stdout.write(f"\r\033[K\r\n")
+                    sys.stdout.write("\r\033[K\r\n")
                     return "delete", sessions[selected_idx], selected_idx
                 else:
                     delete_confirm_idx = selected_idx
@@ -128,7 +128,7 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
                             offset = selected_idx
                         delete_confirm_idx = -1
                 else:
-                    sys.stdout.write(f"\r\033[K\r\n")
+                    sys.stdout.write("\r\033[K\r\n")
                     return None
             
             else:
@@ -206,11 +206,11 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
             
             if ch == '\x03' or ch.lower() == 'q':
-                sys.stdout.write(f"\r\033[K\r\n")
+                sys.stdout.write("\r\033[K\r\n")
                 return None
                 
             elif ch == '\r' or ch == '\n':
-                sys.stdout.write(f"\r\033[K\r\n")
+                sys.stdout.write("\r\033[K\r\n")
                 return messages[selected_idx][0]
             
             elif ch == '\x1b':
@@ -226,7 +226,7 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
                         if selected_idx >= offset + max_display:
                             offset = selected_idx - max_display + 1
                 else:
-                    sys.stdout.write(f"\r\033[K\r\n")
+                    sys.stdout.write("\r\033[K\r\n")
                     return None
             
             sys.stdout.write(f"\r\033[{num_lines}A")

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import uuid
 from typing import Any
 
 
@@ -67,7 +66,9 @@ class MCPClient:
         self._reader_task = asyncio.create_task(self._read_loop())
 
         # JSON-RPC initialize handshake.
-        result = await self._request("initialize", {
+        await self._request(
+            "initialize",
+            {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
             "clientInfo": {"name": "wool", "version": "0.1.0"},
