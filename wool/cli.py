@@ -106,34 +106,76 @@ async def run_repl() -> None:
             if ch == '\x1b' or ch == '\x03':  # Escape or Ctrl+C
                 cancel_event.set()
 
-        first_chunk_received = asyncio.Event()
+        is_thinking = asyncio.Event()
+        is_thinking.set()
 
         async def _spinner() -> None:
             frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
             i = 0
+            spinner_active = False
             try:
-                while not first_chunk_received.is_set() and not cancel_event.is_set():
-                    sys.stdout.write(f"\r  {cyan(frames[i % len(frames)])} {dim('thinking...')}")
-                    sys.stdout.flush()
-                    try:
-                        await asyncio.wait_for(first_chunk_received.wait(), 0.08)
-                    except asyncio.TimeoutError:
+                while not cancel_event.is_set():
+                    if is_thinking.is_set():
+                        sys.stdout.write(f"\r  {cyan(frames[i % len(frames)])} {dim('thinking...')}")
+                        sys.stdout.flush()
+                        spinner_active = True
                         i += 1
+                        await asyncio.sleep(0.08)
+                    else:
+                        if spinner_active:
+                            sys.stdout.write("\r\033[K")
+                            sys.stdout.flush()
+                            spinner_active = False
+                        
+                        wait_think = asyncio.create_task(is_thinking.wait())
+                        wait_cancel = asyncio.create_task(cancel_event.wait())
+                        await asyncio.wait([wait_think, wait_cancel], return_when=asyncio.FIRST_COMPLETED)
             except asyncio.CancelledError:
                 pass
             finally:
-                sys.stdout.write("\r\033[K")
-                sys.stdout.flush()
+                if spinner_active:
+                    sys.stdout.write("\r\033[K")
+                    sys.stdout.flush()
 
         async def _consume() -> None:
             nonlocal printer
             has_reasoned = False
             transitioned = False
+            iterator = agent.process_input(text).__aiter__()
             try:
-                async for chunk_type, chunk in agent.process_input(text):
-                    if not first_chunk_received.is_set():
-                        first_chunk_received.set()
+                while True:
+                    next_task = asyncio.create_task(iterator.__anext__())
+                    cancel_wait = asyncio.create_task(cancel_event.wait())
+                    
+                    done, _ = await asyncio.wait(
+                        [next_task, cancel_wait], 
+                        timeout=0.2, 
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    if cancel_event.is_set():
+                        break
+
+                    if next_task not in done:
+                        is_thinking.set()
+                        await asyncio.wait(
+                            [next_task, asyncio.create_task(cancel_event.wait())], 
+                            return_when=asyncio.FIRST_COMPLETED
+                        )
+                        if cancel_event.is_set():
+                            break
+
+                    try:
+                        chunk_tuple = next_task.result()
+                    except StopAsyncIteration:
+                        break
                         
+                    if is_thinking.is_set():
+                        is_thinking.clear()
+                        await asyncio.sleep(0.01)  # tiny delay to ensure clear
+                        
+                    chunk_type, chunk = chunk_tuple
+
                     if chunk_type == "text":
                         if has_reasoned and not transitioned:
                             sys.stdout.write("\n\n")
@@ -142,10 +184,6 @@ async def run_repl() -> None:
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
                         has_reasoned = True
-                        # Print reasoning directly to stdout in gray.
-                        # Since this happens before StreamPrinter accumulates lines,
-                        # the markdown rewinding will not overwrite the reasoning text!
-                        # We use dim+gray for an elegant "thinking" look.
                         sys.stdout.write(dim(gray(chunk)))
                         sys.stdout.flush()
                     elif chunk_type == "tool":
@@ -156,9 +194,6 @@ async def run_repl() -> None:
                         printer.finish()
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
-                        
-                    if cancel_event.is_set():
-                        break
             except asyncio.CancelledError:
                 pass
 
@@ -175,8 +210,9 @@ async def run_repl() -> None:
                 return_when=asyncio.FIRST_COMPLETED
             )
             
-            if not first_chunk_received.is_set():
-                first_chunk_received.set()
+            cancel_event.set()
+            if is_thinking.is_set():
+                is_thinking.clear()
             await spinner_task
             
             if cancel_event.is_set():
