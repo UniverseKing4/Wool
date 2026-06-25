@@ -141,6 +141,7 @@ async def run_repl() -> None:
             nonlocal printer
             has_reasoned = False
             transitioned = False
+            last_chunk_type = None
             iterator = agent.process_input(text).__aiter__()
             try:
                 while True:
@@ -157,7 +158,10 @@ async def run_repl() -> None:
                         break
 
                     if next_task not in done:
-                        is_thinking.set()
+                        # Only show spinner if we haven't started, or if we just finished a tool.
+                        # This prevents the spinner from corrupting the current line if the network lags mid-sentence.
+                        if last_chunk_type in (None, "tool"):
+                            is_thinking.set()
                         await asyncio.wait(
                             [next_task, asyncio.create_task(cancel_event.wait())], 
                             return_when=asyncio.FIRST_COMPLETED
@@ -194,6 +198,8 @@ async def run_repl() -> None:
                         printer.finish()
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
+                        
+                    last_chunk_type = chunk_type
             except asyncio.CancelledError:
                 pass
 
@@ -210,12 +216,14 @@ async def run_repl() -> None:
                 return_when=asyncio.FIRST_COMPLETED
             )
             
+            user_cancelled = cancel_event.is_set()
+            
             cancel_event.set()
             if is_thinking.is_set():
                 is_thinking.clear()
             await spinner_task
             
-            if cancel_event.is_set():
+            if user_cancelled:
                 if not task.done():
                     task.cancel()
                     await task
