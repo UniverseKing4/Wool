@@ -127,14 +127,21 @@ async def run_repl() -> None:
 
         async def _consume() -> None:
             nonlocal printer
+            has_reasoned = False
+            transitioned = False
             try:
                 async for chunk_type, chunk in agent.process_input(text):
                     if not first_chunk_received.is_set():
                         first_chunk_received.set()
                         
                     if chunk_type == "text":
+                        if has_reasoned and not transitioned:
+                            sys.stdout.write("\n\n")
+                            sys.stdout.flush()
+                            transitioned = True
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
+                        has_reasoned = True
                         # Print reasoning directly to stdout in gray.
                         # Since this happens before StreamPrinter accumulates lines,
                         # the markdown rewinding will not overwrite the reasoning text!
@@ -142,6 +149,10 @@ async def run_repl() -> None:
                         sys.stdout.write(dim(gray(chunk)))
                         sys.stdout.flush()
                     elif chunk_type == "tool":
+                        if has_reasoned and not transitioned:
+                            sys.stdout.write("\n\n")
+                            sys.stdout.flush()
+                            transitioned = True
                         printer.finish()
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
