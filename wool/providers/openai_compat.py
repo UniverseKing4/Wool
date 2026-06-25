@@ -77,6 +77,7 @@ class OpenAICompatProvider(Provider):
             "messages": [m.to_dict() for m in messages],
             "temperature": temperature,
             "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if tools:
             body["tools"] = tools
@@ -133,6 +134,10 @@ class OpenAICompatProvider(Provider):
                         return
 
                     choices = chunk.get("choices", [])
+                    
+                    if "usage" in chunk and chunk["usage"]:
+                        yield StreamEvent(type="usage", usage=chunk["usage"])
+                        
                     if not choices:
                         continue
                     delta = choices[0].get("delta", {})

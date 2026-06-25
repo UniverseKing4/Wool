@@ -56,6 +56,7 @@ class WoolAgent:
         self.messages: list[ChatMessage] = []
         self.active_provider: Provider | None = None
         self.active_model: str | None = config.active_model
+        self.total_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
         self._setup_tools()
         self._setup_providers()
@@ -145,6 +146,10 @@ class WoolAgent:
                         yield "reasoning", event.content
                     elif event.type == "tool_call" and event.tool_call:
                         pending_tool_calls.append(event.tool_call)
+                    elif event.type == "usage" and event.usage:
+                        for k, v in event.usage.items():
+                            if isinstance(v, int):
+                                self.total_usage[k] = self.total_usage.get(k, 0) + v
                     elif event.type == "error":
                         yield "text", "\n" + red(f"Error: {event.content}") + "\n"
                         return
@@ -229,6 +234,7 @@ class WoolAgent:
 
     def clear_history(self) -> None:
         self.messages.clear()
+        self.total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     async def shutdown(self) -> None:
         await self.provider_registry.close_all()

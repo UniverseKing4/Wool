@@ -60,10 +60,11 @@ class ToolCall:
 class StreamEvent:
     """A single event emitted during a streaming chat completion."""
 
-    type: str  # "text" | "tool_call" | "done" | "error"
+    type: str  # "text" | "reasoning" | "tool_call" | "done" | "error" | "usage"
     content: str = ""
     tool_call: ToolCall | None = None
     finish_reason: str | None = None
+    usage: dict[str, int] | None = None
 
 
 class Provider(ABC):

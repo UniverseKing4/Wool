@@ -45,6 +45,7 @@ class SlashCommandHandler:
             "/models": self._models,
             "/tools": self._tools,
             "/mcp": self._mcp,
+            "/usage": self._usage,
             "/clear": self._clear,
             "/status": self._status,
             "/exit": self._exit,
@@ -71,6 +72,7 @@ class SlashCommandHandler:
             ("/models", "List available models for the active provider"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
+            ("/usage", "View token usage for the current session"),
             ("/clear", "Clear conversation history"),
             ("/compact", "Compact history (keep system + last 4 turns)"),
             ("/status", "Show current session status"),
@@ -275,6 +277,22 @@ class SlashCommandHandler:
         else:
             ansi_error("Unknown sub-command.  Try: list, connect, disconnect")
 
+        return False
+
+    # ── /usage ────────────────────────────────────────────────────────────
+
+    async def _usage(self, _args: str) -> bool:
+        usage = self.agent.total_usage
+        prompt = usage.get("prompt_tokens", 0)
+        completion = usage.get("completion_tokens", 0)
+        total = usage.get("total_tokens", 0)
+        
+        print()
+        print(f"  {bold(cyan('Session Token Usage'))}")
+        print(f"  {dim('Prompt:')}     {prompt:,}")
+        print(f"  {dim('Completion:')} {completion:,}")
+        print(f"  {dim('Total:')}      {bold(f'{total:,}')}")
+        print()
         return False
 
     # ── /clear ────────────────────────────────────────────────────────────

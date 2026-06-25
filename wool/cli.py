@@ -85,7 +85,6 @@ async def run_repl() -> None:
 
     _print_banner(agent)
 
-    turn = 1
     typeahead_buffer: list[str] = []
     
     def _pre_input_hook() -> None:
@@ -102,6 +101,7 @@ async def run_repl() -> None:
         # ── read ──
         old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
         try:
+            turn = sum(1 for m in agent.messages if m.role == "user") + 1
             user_input = input(_prompt(turn))
         except KeyboardInterrupt:
             print()
@@ -317,7 +317,6 @@ async def run_repl() -> None:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
         print()  # spacer after response
-        turn += 1
 
     # ── shutdown ──
     print(f"\n  {dim('← Shutting down…')}")
