@@ -21,18 +21,39 @@ class StreamPrinter:
     """
 
     def __init__(self, *, render_md: bool = True) -> None:
+        import os
         self._buffer: list[str] = []
         self._line_count: int = 0
+        self._col: int = 0
         self._started: bool = False
         self._render_md = render_md
+        
+        # Get terminal width for accurate line wrapping calc
+        try:
+            ts = os.get_terminal_size()
+            self._columns = ts.columns
+            self._rows = ts.lines
+        except OSError:
+            self._columns = 80
+            self._rows = 24
 
     def print_chunk(self, chunk: str) -> None:
         """Print *chunk* immediately and accumulate it."""
         if not chunk:
             return
         self._buffer.append(chunk)
-        # Count newlines for later cursor rewind.
-        self._line_count += chunk.count("\n")
+        
+        # Accurately count physical lines by tracking wrapping
+        for char in chunk:
+            if char == '\n':
+                self._line_count += 1
+                self._col = 0
+            else:
+                self._col += 1
+                if self._col >= self._columns:
+                    self._line_count += 1
+                    self._col = 0
+                    
         sys.stdout.write(chunk)
         sys.stdout.flush()
         self._started = True
@@ -52,15 +73,22 @@ class StreamPrinter:
                 sys.stdout.write("\n")
                 self._line_count += 1
 
-            # Move cursor up to the start of the streamed output and clear.
-            if self._line_count > 0:
+            # Only rewind if we haven't scrolled the terminal off-screen
+            if 0 < self._line_count < self._rows:
+                # Move cursor up to the start of the streamed output and clear.
                 sys.stdout.write(f"\033[{self._line_count}A")  # move up
                 sys.stdout.write(f"\033[0J")  # clear from cursor to end
 
-            # Render markdown and print.
-            rendered = render_markdown(full.strip())
-            sys.stdout.write(rendered + "\n")
-            sys.stdout.flush()
+                # Render markdown and print.
+                rendered = render_markdown(full.strip())
+                sys.stdout.write(rendered + "\n")
+                sys.stdout.flush()
+            else:
+                # Terminal scrolled; rewinding would corrupt the screen.
+                # Just ensure there's a trailing newline.
+                if not full.endswith("\n"):
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
 
         elif self._started and full:
             # Non-TTY or no markdown: just ensure trailing newline.
