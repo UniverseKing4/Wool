@@ -51,6 +51,7 @@ class SlashCommandHandler:
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/usage": self._usage,
+            "/context": self._context,
             "/clear": self._clear,
             "/status": self._status,
             "/rewind": self._rewind,
@@ -85,6 +86,7 @@ class SlashCommandHandler:
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
+            ("/context", "View detailed token breakdown of current context"),
             ("/clear", "Clear conversation history"),
             ("/compact", "Compact history (keep system + last 4 turns)"),
             ("/status", "Show current session status"),
@@ -453,6 +455,63 @@ class SlashCommandHandler:
         if current_ctx > 0:
             print(f"  {dim('Current Context Size:')}  {current_ctx:,} {dim('tokens')}")
             print()
+        return False
+
+    # ── /context ──────────────────────────────────────────────────────────
+
+    async def _context(self, _args: str) -> bool:
+        def est_tokens(text: str | None) -> int:
+            if not text: return 0
+            return max(1, len(text) // 4)
+            
+        import json
+        
+        user_msgs = 0
+        agent_resp = 0
+        tool_calls = 0
+        
+        for msg in self.agent.messages:
+            if msg.role == "user":
+                user_msgs += est_tokens(msg.content)
+            elif msg.role == "assistant":
+                # For context weight, we use character count estimation instead of 
+                # generated tokens, because generated tokens reflect output effort, 
+                # whereas input tokens reflect string length.
+                agent_resp += est_tokens(msg.content)
+                if getattr(msg, "tool_calls", None):
+                    try:
+                        tool_calls += est_tokens(json.dumps([tc.to_dict() for tc in msg.tool_calls]))
+                    except Exception:
+                        pass
+            elif msg.role == "tool":
+                tool_calls += est_tokens(msg.content)
+                
+        from wool.agent import SYSTEM_PROMPT
+        sys_prompt = est_tokens(SYSTEM_PROMPT)
+        
+        try:
+            builtin_tools = est_tokens(json.dumps(self.agent.tool_registry.get_schemas()))
+        except Exception:
+            builtin_tools = 0
+            
+        try:
+            mcp_tools = est_tokens(json.dumps([t.to_openai_schema() for t in self.agent.mcp_manager.get_tools()]))
+        except Exception:
+            mcp_tools = 0
+            
+        total = user_msgs + agent_resp + tool_calls + sys_prompt + builtin_tools + mcp_tools
+        
+        print()
+        print(f"  {bold(cyan('Context Breakdown (Estimated Tokens)'))}")
+        print(f"  {dim('Total:')}             {bold(f'{total:,}')}")
+        print(f"  {green('◉')} {dim('User messages:')}   {user_msgs:,}")
+        print(f"  {green('◉')} {dim('Agent responses:')} {agent_resp:,}")
+        print(f"  {green('◉')} {dim('Tool calls:')}      {tool_calls:,}")
+        print(f"  {dim('□')}")
+        print(f"  {cyan('⛁')} {dim('System prompt:')}   {sys_prompt:,}")
+        print(f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,}")
+        print(f"  {cyan('⛁')} {dim('Subagents/MCP:')}   {mcp_tools:,}")
+        print()
         return False
 
     # ── /clear ────────────────────────────────────────────────────────────
