@@ -39,7 +39,8 @@ Guidelines:
 - When using tools, briefly explain what you are doing.
 - After receiving tool results, summarise findings clearly.
 - Respect Linux file permissions and system security.
-- If a task is complex, break it into steps and use tools sequentially.
+- You FULLY support parallel tool execution. If you need to perform multiple independent tasks (e.g. searching multiple files, spawning multiple subagents), you MUST invoke all of them concurrently in a single step!
+- CRITICAL: You must use the native JSON tool calling format provided by the API. DO NOT use text-based tags like `<call:function{}>` to execute tools. Emit multiple standard JSON tool calls in your response natively.
 """
 
 MAX_TOOL_ITERATIONS = 25
