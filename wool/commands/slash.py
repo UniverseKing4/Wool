@@ -340,15 +340,23 @@ class SlashCommandHandler:
                 ansi_error("Usage: /session delete <name>")
                 return False
             name = parts[1]
-            if name == self.agent.config.active_session:
-                ansi_error("Cannot delete the active session. Switch first.")
-                return False
             path = self.agent.get_session_path(name)
+            
             if path.exists():
                 path.unlink()
                 success(f"Session '{name}' deleted.")
             else:
                 ansi_error(f"Session '{name}' not found.")
+                return False
+                
+            if name == self.agent.config.active_session:
+                if name != "default":
+                    self.agent.config.active_session = "default"
+                    self.agent.config.save()
+                    self.agent.load_session()
+                    success("Switched to session 'default'.")
+                else:
+                    self.agent.clear_history()
                 
         else:
             ansi_error("Unknown sub-command. Try: new, delete")
