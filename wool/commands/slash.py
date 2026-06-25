@@ -513,15 +513,15 @@ class SlashCommandHandler:
         
         print()
         print(f"  {bold(cyan('Context Breakdown (Estimated Tokens)'))}")
-        print(f"  {dim('Total:')}             {bold(f'{total:,}')}")
-        print(f"  {green('◉')} {dim('User messages:')}   {user_msgs:,}")
-        print(f"  {green('◉')} {dim('Agent responses:')} {agent_resp:,}")
-        print(f"  {green('◉')} {dim('Tool calls:')}      {tool_calls:,}")
+        print(f"  {dim('Total:')}             {bold(f'{total:,}')} {dim('tokens')}")
+        print(f"  {green('◉')} {dim('User messages:')}   {user_msgs:,} {dim('tokens')}")
+        print(f"  {green('◉')} {dim('Agent responses:')} {agent_resp:,} {dim('tokens')}")
+        print(f"  {green('◉')} {dim('Tool calls:')}      {tool_calls:,} {dim('tokens')}")
         print(f"  {dim('□')}")
-        print(f"  {cyan('⛁')} {dim('System prompt:')}   {sys_prompt:,}")
-        print(f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,}")
-        print(f"  {cyan('⛁')} {dim('Subagents:')}       {subagents:,}")
-        print(f"  {cyan('⛁')} {dim('MCP tools:')}       {mcp_tools:,}")
+        print(f"  {cyan('⛁')} {dim('System prompt:')}   {sys_prompt:,} {dim('tokens')}")
+        print(f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,} {dim('tokens')}")
+        print(f"  {cyan('⛁')} {dim('Subagents:')}       {subagents:,} {dim('tokens')}")
+        print(f"  {cyan('⛁')} {dim('MCP tools:')}       {mcp_tools:,} {dim('tokens')}")
         print()
         return False
 
