@@ -261,6 +261,9 @@ async def run_repl() -> None:
             finally:
                 if has_reasoned and not transitioned:
                     reasoning_printer.finish()
+                    sys.stdout.write("\n\n")
+                    sys.stdout.flush()
+                printer.finish()
 
         try:
             tty.setcbreak(fd)
