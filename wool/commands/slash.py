@@ -125,6 +125,13 @@ class SlashCommandHandler:
                 self.agent.active_provider = (
                     self.agent.provider_registry.get(names[0]) if names else None
                 )
+                if self.agent.active_provider:
+                    self.agent.config.active_provider = self.agent.active_provider.name
+                    pc = self.agent.config.providers.get(self.agent.active_provider.name)
+                    self.agent.active_model = pc.default_model if pc else None
+                else:
+                    self.agent.config.active_provider = None
+                    self.agent.active_model = None
             success(f"Provider '{name}' removed.")
 
         elif sub == "switch":
@@ -138,6 +145,12 @@ class SlashCommandHandler:
                 return False
             self.agent.active_provider = p
             self.agent.config.active_provider = name
+            
+            p_config = self.agent.config.providers.get(name)
+            if p_config and p_config.default_model:
+                self.agent.active_model = p_config.default_model
+                self.agent.config.active_model = p_config.default_model
+                
             self.agent.config.save()
             success(f"Switched to provider '{name}'.")
         else:
@@ -182,6 +195,8 @@ class SlashCommandHandler:
             model_id = parts[1]
             self.agent.active_model = model_id
             self.agent.config.active_model = model_id
+            if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
+                self.agent.config.providers[self.agent.active_provider.name].default_model = model_id
             self.agent.config.save()
             success(f"Model set to '{model_id}'.")
 
@@ -189,6 +204,8 @@ class SlashCommandHandler:
             # Treat as direct model switch.
             self.agent.active_model = sub
             self.agent.config.active_model = sub
+            if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
+                self.agent.config.providers[self.agent.active_provider.name].default_model = sub
             self.agent.config.save()
             success(f"Model set to '{sub}'.")
 

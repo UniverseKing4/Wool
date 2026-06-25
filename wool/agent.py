@@ -88,6 +88,11 @@ class WoolAgent:
         elif self.config.providers:
             first_name = next(iter(self.config.providers))
             self.active_provider = self.provider_registry.get(first_name)
+            
+        if self.active_provider:
+            pc = self.config.providers.get(self.active_provider.name)
+            if pc and pc.default_model:
+                self.active_model = pc.default_model
 
     # ── system message ────────────────────────────────────────────────────
 
