@@ -20,6 +20,9 @@ class StreamPrinter:
         self._render_md: bool = render_md
         self._started: bool = False
         
+        self._has_text: bool = False
+        self._empty_lines: int = 0
+        
         self._in_code_block: bool = False
         self._code_lang: str = ""
 
@@ -45,6 +48,17 @@ class StreamPrinter:
         line = line.rstrip("\r")
         
         if not self._render_md or not sys.stdout.isatty():
+            # If not rendering markdown, still respect the limit outside of code blocks
+            if not self._in_code_block and not line.strip():
+                if self._has_text and self._empty_lines < 1:
+                    sys.stdout.write("\r\n")
+                if self._has_text:
+                    self._empty_lines += 1
+                sys.stdout.flush()
+                return
+            
+            self._has_text = True
+            self._empty_lines = 0
             sys.stdout.write(self._apply_style(line) + "\r\n")
             sys.stdout.flush()
             return
@@ -68,6 +82,18 @@ class StreamPrinter:
                 sys.stdout.write(self._apply_style(styled) + "\r\n")
             sys.stdout.flush()
             return
+            
+        # For non-code blocks, strip excessive newlines
+        if not line.strip():
+            if self._has_text and self._empty_lines < 1:
+                sys.stdout.write("\r\n")
+            if self._has_text:
+                self._empty_lines += 1
+            sys.stdout.flush()
+            return
+            
+        self._has_text = True
+        self._empty_lines = 0
 
         cm = _FENCE_RE.match(line)
         if cm:
@@ -138,10 +164,7 @@ class StreamPrinter:
         # Plain paragraph
         styled = _style_inline(line)
         out_line = f"  {styled}" if styled.strip() else ""
-        if out_line:
-            sys.stdout.write(self._apply_style(out_line) + "\r\n")
-        else:
-            sys.stdout.write("\r\n")
+        sys.stdout.write(self._apply_style(out_line) + "\r\n")
         sys.stdout.flush()
 
     def finish(self) -> str:
@@ -164,5 +187,7 @@ class StreamPrinter:
         """Reset the printer state."""
         self._buffer = ""
         self._started = False
+        self._has_text = False
+        self._empty_lines = 0
         self._in_code_block = False
         self._code_lang = ""
