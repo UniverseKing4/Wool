@@ -55,23 +55,49 @@ class SubagentDelegation(Tool):
         if not task:
             return ToolResult(success=False, output="", error="Task description is required.")
 
-        # In the current release the subagent infrastructure is wired at the
-        # agent-core level.  This tool records the request and returns
-        # an acknowledgement so the LLM can continue its reasoning.
-        summary = (
-            f"Subagent request registered.\n"
-            f"  Task: {task}\n"
-        )
-        if context:
-            summary += f"  Context: {context[:200]}\n"
+        from wool.config import WoolConfig
+        from wool.agent import WoolAgent
+        from wool.providers.base import ChatMessage
+        import time
+
+        sub_config = WoolConfig.load()
+        sub_config.active_session = f"subagent_{int(time.time())}"
+        sub_agent = WoolAgent(sub_config)
+        
+        # Prevent infinite subagent recursion
+        sub_agent.tool_registry._tools.pop("use_subagent", None)
+        
+        # Restrict tools if specified
         if tools:
-            summary += f"  Tools: {', '.join(tools)}\n"
-        summary += (
-            "\nNote: Subagent orchestration will execute this task in the "
-            "background. Results will be provided when available."
-        )
+            for name in list(sub_agent.tool_registry._tools.keys()):
+                if name not in tools:
+                    sub_agent.tool_registry._tools.pop(name, None)
+
+        prompt = f"TASK:\n{task}\n"
+        if context:
+            prompt += f"\nCONTEXT:\n{context}\n"
+            
+        final_output = ""
+        try:
+            # Consume the generator to drive the subagent forward
+            async for _event_type, _content in sub_agent.process_input(prompt):
+                pass
+                
+            if sub_agent.messages and sub_agent.messages[-1].role == "assistant":
+                final_output = sub_agent.messages[-1].content
+            else:
+                final_output = "The subagent completed its execution but did not produce a final response."
+                
+        except Exception as exc:
+            return ToolResult(success=False, output=f"Subagent execution failed: {exc}", error=str(exc))
+        finally:
+            # Clean up the temporary session file
+            path = sub_agent.get_session_path()
+            if path.exists():
+                path.unlink()
+
         return ToolResult(
             success=True,
-            output=summary,
+            output=f"Subagent Execution Complete.\n\nFinal Output:\n{final_output}",
             metadata={"task": task, "tools": tools},
         )
