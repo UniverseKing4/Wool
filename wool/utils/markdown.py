@@ -140,8 +140,10 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
                 out.append(f"  {_a(_DIM)}┌─ {lang} ─{'─' * max(0, 40 - len(lang))}┐{_a(_RST)}")
             else:
                 out.append(f"  {_a(_DIM)}┌{'─' * 44}┐{_a(_RST)}")
+            from wool.utils.syntax import highlight_code
             for cl in code_lines:
-                styled = f"  {_a(_DIM)}│{_a(_RST)} {_a(_BG_GRAY, _FG_WHITE)}{cl}{_a(_RST)}"
+                hl_line = highlight_code(cl, lang)
+                styled = f"  {_a(_DIM)}│{_a(_RST)} {_a(_BG_GRAY)}{hl_line}{_a(_RST)}"
                 out.append(styled)
             out.append(f"  {_a(_DIM)}└{'─' * 44}┘{_a(_RST)}")
             continue

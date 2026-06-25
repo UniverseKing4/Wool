@@ -62,7 +62,9 @@ class StreamPrinter:
                 self._in_code_block = False
                 sys.stdout.write(self._apply_style(f"  {_a(_DIM)}└{'─' * 44}┘{_a(_RST)}") + "\r\n")
             else:
-                styled = f"  {_a(_DIM)}│{_a(_RST)} {_a(_BG_GRAY, _FG_WHITE)}{line}{_a(_RST)}"
+                from wool.utils.syntax import highlight_code
+                hl_line = highlight_code(line, self._code_lang)
+                styled = f"  {_a(_DIM)}│{_a(_RST)} {_a(_BG_GRAY)}{hl_line}{_a(_RST)}"
                 sys.stdout.write(self._apply_style(styled) + "\r\n")
             sys.stdout.flush()
             return
@@ -70,7 +72,8 @@ class StreamPrinter:
         cm = _FENCE_RE.match(line)
         if cm:
             self._in_code_block = True
-            lang = cm.group(2).strip()
+            lang = cm.group(3).strip()
+            self._code_lang = lang
             if lang:
                 sys.stdout.write(self._apply_style(f"  {_a(_DIM)}┌─ {lang} ─{'─' * max(0, 40 - len(lang))}┐{_a(_RST)}") + "\r\n")
             else:
