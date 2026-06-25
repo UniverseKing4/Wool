@@ -490,16 +490,26 @@ class SlashCommandHandler:
         sys_prompt = est_tokens(SYSTEM_PROMPT)
         
         try:
-            builtin_tools = est_tokens(json.dumps(self.agent.tool_registry.get_schemas()))
+            builtin_schemas = []
+            subagent_schemas = []
+            for t in self.agent.tool_registry.list_tools():
+                schema = t.to_openai_schema()
+                if t.name == "use_subagent":
+                    subagent_schemas.append(schema)
+                else:
+                    builtin_schemas.append(schema)
+            builtin_tools = est_tokens(json.dumps(builtin_schemas))
+            subagents = est_tokens(json.dumps(subagent_schemas))
         except Exception:
             builtin_tools = 0
+            subagents = 0
             
         try:
             mcp_tools = est_tokens(json.dumps([t.to_openai_schema() for t in self.agent.mcp_manager.get_tools()]))
         except Exception:
             mcp_tools = 0
             
-        total = user_msgs + agent_resp + tool_calls + sys_prompt + builtin_tools + mcp_tools
+        total = user_msgs + agent_resp + tool_calls + sys_prompt + builtin_tools + subagents + mcp_tools
         
         print()
         print(f"  {bold(cyan('Context Breakdown (Estimated Tokens)'))}")
@@ -510,7 +520,8 @@ class SlashCommandHandler:
         print(f"  {dim('□')}")
         print(f"  {cyan('⛁')} {dim('System prompt:')}   {sys_prompt:,}")
         print(f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,}")
-        print(f"  {cyan('⛁')} {dim('Subagents/MCP:')}   {mcp_tools:,}")
+        print(f"  {cyan('⛁')} {dim('Subagents:')}       {subagents:,}")
+        print(f"  {cyan('⛁')} {dim('MCP tools:')}       {mcp_tools:,}")
         print()
         return False
 
