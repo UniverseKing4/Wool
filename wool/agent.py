@@ -172,9 +172,44 @@ class WoolAgent:
             ))
             self.save_session()
 
-            # If there are no tool calls, we're done.
+            # If there are no tool calls, check for background tasks.
             if not pending_tool_calls:
-                return
+                if hasattr(self, "_active_bg_tasks") and self._active_bg_tasks:
+                    bg_tasks = self._active_bg_tasks
+                    self._active_bg_tasks = []
+                    
+                    import asyncio
+                    yield "tool", f"\r\n  {dim('┌─')} {cyan('System')} {dim('──────────────────────────────────────────')}\r\n"
+                    yield "tool", f"  {dim('│')} {dim('Waiting for background subagents to finish...')}\r\n"
+                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+
+                    results = await asyncio.gather(*bg_tasks, return_exceptions=True)
+                    
+                    combined_result = []
+                    for i, res in enumerate(results):
+                        if isinstance(res, Exception):
+                            combined_result.append(f"Subagent {i+1} failed: {res}")
+                        else:
+                            bg_tc, bg_res = res
+                            combined_result.append(f"Subagent {bg_tc.id} Result:\n{bg_res}")
+                    
+                    final_text = "\n\n".join(combined_result)
+                    
+                    output_lines = final_text.splitlines()
+                    num_lines = len(output_lines)
+                    yield "tool", f"  {dim('┌─')} {cyan('System')} {bold(f'Background Results ({num_lines} lines):')} {dim('─────────────')}\r\n"
+                    for line in output_lines:
+                        yield "tool", f"  {dim('│')} {dim(line)}\r\n"
+                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+
+                    self.messages.append(ChatMessage(
+                        role="user",
+                        content=f"The background subagents have finished. Here are their final results:\n\n{final_text}\n\nPlease provide a final summary of these results to the user."
+                    ))
+                    self.save_session()
+                    continue
+                else:
+                    return
 
             original_pending_tool_calls = pending_tool_calls
 
@@ -237,21 +272,17 @@ class WoolAgent:
             tasks = {}
             for tc in pending_tool_calls:
                 if tc.name == "use_subagent":
-                    # Fire and forget for true background concurrency!
+                    # Run in background but save the task so we can wait for it at the end of the turn
                     async def run_bg_subagent(bg_tc):
                         _, _, bg_res = await execute_tool(bg_tc)
-                        output_lines = bg_res.splitlines()
-                        num_lines = len(output_lines)
-                        
-                        import sys
-                        sys.stdout.write(f"\r\n\r\n  {dim('┌─')} {cyan('use_subagent')} {bold(f'Background Result ({num_lines} lines):')} {dim('─────────────')}\r\n")
-                        for line in output_lines:
-                            sys.stdout.write(f"  {dim('│')} {dim(line)}\r\n")
-                        sys.stdout.write(f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n")
-                        sys.stdout.flush()
+                        return bg_tc, bg_res
 
-                    asyncio.create_task(run_bg_subagent(tc))
-                    # Return immediate success to the LLM so it can continue!
+                    bg_task = asyncio.create_task(run_bg_subagent(tc))
+                    if not hasattr(self, "_active_bg_tasks"):
+                        self._active_bg_tasks = []
+                    self._active_bg_tasks.append(bg_task)
+
+                    # Return immediate success to the LLM so it can continue streaming the current turn!
                     async def instant_success(tc):
                         return tc, {}, "Subagent successfully spawned and is running in the background. You may continue your work."
                     tasks[tc.id] = asyncio.create_task(instant_success(tc))
