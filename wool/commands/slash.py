@@ -43,6 +43,7 @@ class SlashCommandHandler:
             "/provider": self._provider,
             "/model": self._model,
             "/models": self._models,
+            "/session": self._session,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/usage": self._usage,
@@ -70,6 +71,7 @@ class SlashCommandHandler:
             ("/provider list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
+            ("/session [list|switch|new|rename|delete]", "Manage conversation sessions"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -276,6 +278,76 @@ class SlashCommandHandler:
 
         else:
             ansi_error("Unknown sub-command.  Try: list, connect, disconnect")
+
+        return False
+
+    # ── /session ──────────────────────────────────────────────────────────
+
+    async def _session(self, args: str) -> bool:
+        from wool.config import CONFIG_DIR
+        parts = args.strip().split()
+        sub = parts[0] if parts else "list"
+        sess_dir = CONFIG_DIR / "sessions"
+
+        if sub == "list":
+            print(f"\n  {bold(cyan('Sessions:'))}")
+            sess_dir.mkdir(parents=True, exist_ok=True)
+            files = {f.stem for f in sess_dir.glob("*.json")}
+            files.add(self.agent.config.active_session)
+            
+            for name in sorted(files):
+                if name == self.agent.config.active_session:
+                    print(f"  {green('●')} {cyan(name)}")
+                else:
+                    print(f"  {dim('○')} {white(name)}")
+            print()
+
+        elif sub in ("switch", "new"):
+            if len(parts) < 2:
+                ansi_error(f"Usage: /session {sub} <name>")
+                return False
+            name = parts[1]
+            if name == self.agent.config.active_session:
+                info(f"Already in session '{name}'.")
+                return False
+            self.agent.save_session()
+            self.agent.config.active_session = name
+            self.agent.config.save()
+            self.agent.load_session()
+            self.agent.save_session()
+            success(f"Switched to session '{name}'.")
+
+        elif sub == "rename":
+            if len(parts) < 2:
+                ansi_error("Usage: /session rename <new_name>")
+                return False
+            new_name = parts[1]
+            old_path = self.agent.get_session_path()
+            self.agent.config.active_session = new_name
+            self.agent.config.save()
+            new_path = self.agent.get_session_path()
+            if old_path.exists():
+                old_path.rename(new_path)
+            self.agent.save_session()
+            success(f"Session renamed to '{new_name}'.")
+
+        elif sub == "delete":
+            if len(parts) < 2:
+                ansi_error("Usage: /session delete <name>")
+                return False
+            name = parts[1]
+            if name == self.agent.config.active_session:
+                ansi_error("Cannot delete the active session. Switch first.")
+                return False
+            path = self.agent.get_session_path(name)
+            if path.exists():
+                path.unlink()
+                success(f"Session '{name}' deleted.")
+            else:
+                ansi_error(f"Session '{name}' not found.")
+                
+        else:
+            ansi_error("Unknown sub-command. Try: list, switch, new, rename, delete")
 
         return False
 

@@ -39,6 +39,19 @@ class ChatMessage:
             d["name"] = self.name
         return d
 
+    @classmethod
+    def from_dict(cls, data: dict) -> ChatMessage:
+        tcs = None
+        if "tool_calls" in data:
+            tcs = [ToolCall.from_dict(tc) for tc in data["tool_calls"]]
+        return cls(
+            role=data["role"],
+            content=data.get("content"),
+            tool_calls=tcs,
+            tool_call_id=data.get("tool_call_id"),
+            name=data.get("name")
+        )
+
 
 @dataclass
 class ToolCall:
@@ -54,6 +67,15 @@ class ToolCall:
             "type": "function",
             "function": {"name": self.name, "arguments": self.arguments},
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ToolCall:
+        func = data.get("function", {})
+        return cls(
+            id=data["id"],
+            name=func.get("name", ""),
+            arguments=func.get("arguments", "")
+        )
 
 
 @dataclass

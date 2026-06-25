@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any, AsyncIterator
 
-from wool.config import WoolConfig
+from wool.config import WoolConfig, CONFIG_DIR
 from wool.mcp import MCPManager
 from wool.providers import (
     ChatMessage,
@@ -60,6 +60,7 @@ class WoolAgent:
 
         self._setup_tools()
         self._setup_providers()
+        self.load_session()
 
     # ── bootstrapping ─────────────────────────────────────────────────────
 
@@ -232,10 +233,34 @@ class WoolAgent:
 
     # ── session management ────────────────────────────────────────────────
 
+    def get_session_path(self, session_name: str | None = None) -> Path:
+        name = session_name or self.config.active_session
+        sess_dir = CONFIG_DIR / "sessions"
+        sess_dir.mkdir(parents=True, exist_ok=True)
+        return sess_dir / f"{name}.json"
+
+    def load_session(self) -> None:
+        path = self.get_session_path()
+        if not path.exists():
+            self.messages = []
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            self.messages = [ChatMessage.from_dict(m) for m in data.get("messages", [])]
+        except Exception:
+            self.messages = []
+
+    def save_session(self) -> None:
+        path = self.get_session_path()
+        data = {"messages": [m.to_dict() for m in self.messages]}
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
     def clear_history(self) -> None:
         self.messages.clear()
         self.total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        self.save_session()
 
     async def shutdown(self) -> None:
+        self.save_session()
         await self.provider_registry.close_all()
         await self.mcp_manager.disconnect_all()

@@ -315,6 +315,7 @@ async def run_repl() -> None:
         finally:
             loop.remove_reader(fd)
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            agent.save_session()
 
         print()  # spacer after response
 

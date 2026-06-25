@@ -33,6 +33,7 @@ class WoolConfig:
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
     active_provider: str | None = None
     active_model: str | None = None
+    active_session: str = "default"
 
     # ── persistence ───────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ class WoolConfig:
             providers=providers,
             active_provider=raw.get("active_provider"),
             active_model=raw.get("active_model"),
+            active_session=raw.get("active_session", "default"),
         )
 
     def save(self) -> None:
@@ -67,6 +69,7 @@ class WoolConfig:
             "providers": {n: asdict(p) for n, p in self.providers.items()},
             "active_provider": self.active_provider,
             "active_model": self.active_model,
+            "active_session": self.active_session,
         }
         CONFIG_FILE.write_text(
             json.dumps(data, indent=2, ensure_ascii=False) + "\n",
