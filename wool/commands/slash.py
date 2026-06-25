@@ -292,42 +292,19 @@ class SlashCommandHandler:
         sess_dir = CONFIG_DIR / "sessions"
 
         if sub == "list":
-            print(f"\n  {bold(cyan('Sessions:'))}")
             sess_dir.mkdir(parents=True, exist_ok=True)
             files = {f.stem for f in sess_dir.glob("*.json")}
             files.add(self.agent.config.active_session)
-            
             session_list = sorted(files)
-            for i, name in enumerate(session_list, 1):
-                if name == self.agent.config.active_session:
-                    print(f"  {green(str(i) + '.')} {green('●')} {cyan(name)}")
-                else:
-                    print(f"  {dim(str(i) + '.')} {dim('○')} {white(name)}")
-            print()
             
-            try:
-                choice = input(f"  {dim('Enter number to switch, ')}d <num>{dim(' to delete, or ')}q{dim(' to cancel: ')}").strip()
-            except (KeyboardInterrupt, EOFError):
-                print()
-                return False
-
-            if not choice or choice.lower() == 'q':
+            from wool.utils.menu import run_session_menu
+            result = run_session_menu(session_list, self.agent.config.active_session)
+            
+            if not result:
                 return False
                 
-            is_delete = choice.lower().startswith('d ')
-            idx_str = choice[2:].strip() if is_delete else choice
-                
-            if not idx_str.isdigit():
-                ansi_error("Invalid selection.")
-                return False
-                
-            idx = int(idx_str) - 1
-            if idx < 0 or idx >= len(session_list):
-                ansi_error("Invalid selection.")
-                return False
-                
-            selected_name = session_list[idx]
-            if is_delete:
+            action, selected_name = result
+            if action == "delete":
                 return await self._session(f"delete {selected_name}")
             else:
                 return await self._session(f"switch {selected_name}")
