@@ -39,12 +39,17 @@ class StreamPrinter:
 
     def print_chunk(self, chunk: str) -> None:
         """Print *chunk* immediately and accumulate it."""
+        import re
         if not chunk:
             return
         self._buffer.append(chunk)
         
+        # Strip ANSI escape codes for accurate physical wrapping calc
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        plain_chunk = ansi_escape.sub('', chunk)
+        
         # Accurately count physical lines by tracking wrapping
-        for char in chunk:
+        for char in plain_chunk:
             if char == '\n':
                 self._line_count += 1
                 self._col = 0
