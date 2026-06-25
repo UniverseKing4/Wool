@@ -48,16 +48,17 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
                 icon = dim("○")
                 colored_name = white(name) if i != delete_confirm_idx else red(name)
                 
-            if i == delete_confirm_idx:
-                colored_name += red(" (Press 'd' again to confirm)")
-            elif i == selected_idx:
+            if i == selected_idx:
                 colored_name = bold(colored_name)
                 
             color_prefix = cyan(prefix) if i == selected_idx else prefix
             lines.append(f"  {color_prefix} {icon} {colored_name}")
             
         lines.append("")
-        lines.append(f"  {dim('Use ↑/↓ to move, ')}Enter{dim(' to switch, ')}d{dim(' to delete, ')}q/Esc{dim(' to cancel')}")
+        if delete_confirm_idx != -1:
+            lines.append(f"  {red('Press')} {bold(red('d'))} {red('again to confirm delete, or any other key to cancel')}")
+        else:
+            lines.append(f"  {dim('Use ↑/↓ to move, ')}Enter{dim(' to switch, ')}d{dim(' to delete, ')}q/Esc{dim(' to cancel')}")
         
         # In raw mode, we must use \r\n
         for line in lines:

@@ -295,27 +295,28 @@ class SlashCommandHandler:
 
         if sub == "list":
             sess_dir.mkdir(parents=True, exist_ok=True)
-            files = {f.stem for f in sess_dir.glob("*.json")}
-            files.add(self.agent.config.active_session)
-            session_list = sorted(files)
-            
             from wool.utils.menu import run_session_menu
-            result = run_session_menu(session_list, self.agent.config.active_session)
             
-            if not result:
-                return False
+            while True:
+                files = {f.stem for f in sess_dir.glob("*.json")}
+                files.add(self.agent.config.active_session)
+                session_list = sorted(files)
                 
-            action, selected_name = result
-            if action == "delete":
-                return await self._session(f"delete {selected_name}")
-            else:
-                self.agent.save_session()
-                self.agent.config.active_session = selected_name
-                self.agent.config.save()
-                self.agent.load_session()
-                self.agent.save_session()
-                success(f"Switched to session '{selected_name}'.")
-                return False
+                result = run_session_menu(session_list, self.agent.config.active_session)
+                if not result:
+                    return False
+                    
+                action, selected_name = result
+                if action == "delete":
+                    await self._session(f"delete {selected_name}")
+                else:
+                    self.agent.save_session()
+                    self.agent.config.active_session = selected_name
+                    self.agent.config.save()
+                    self.agent.load_session()
+                    self.agent.save_session()
+                    success(f"Switched to session '{selected_name}'.")
+                    return False
 
         elif sub == "new":
             if len(parts) < 2:
