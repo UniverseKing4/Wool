@@ -31,8 +31,15 @@ class SubagentDelegation(Tool):
     def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
+                name="tasks", type="array",
+                description="List of tasks to delegate concurrently. To spawn 3 subagents at once, provide an array of 3 distinct tasks.",
+                required=False,
+                items_type="string",
+            ),
+            ToolParameter(
                 name="task", type="string",
-                description="Description of the task for the subagent.",
+                description="Legacy single task argument. Prefer 'tasks' for multiple concurrent subagents.",
+                required=False,
             ),
             ToolParameter(
                 name="context", type="string",
@@ -51,6 +58,9 @@ class SubagentDelegation(Tool):
         task: str = kwargs.get("task", "")
         context: str = kwargs.get("context", "")
         tools: list[str] = kwargs.get("tools", [])
+        
+        # Note: 'tasks' array expansion is handled upstream in agent.py to preserve UI parallelism.
+        # This execute method only handles single tasks.
 
         if not task:
             return ToolResult(success=False, output="", error="Task description is required.")

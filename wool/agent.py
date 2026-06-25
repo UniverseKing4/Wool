@@ -176,6 +176,38 @@ class WoolAgent:
             if not pending_tool_calls:
                 return
 
+            original_pending_tool_calls = pending_tool_calls
+
+            # Expand use_subagent with multiple tasks to bypass proxy limitations
+            expanded_tool_calls = []
+            expansion_map: dict[str, list[str]] = {}  # original_id -> list of expanded_ids
+            
+            for tc in pending_tool_calls:
+                if tc.name == "use_subagent":
+                    try:
+                        args = json.loads(tc.arguments) if tc.arguments else {}
+                        tasks_array = args.get("tasks", [])
+                        if tasks_array and isinstance(tasks_array, list):
+                            expanded_ids = []
+                            for i, t in enumerate(tasks_array):
+                                new_args = args.copy()
+                                new_args.pop("tasks", None)
+                                new_args["task"] = t
+                                expanded_id = f"{tc.id}_{i}"
+                                expanded_ids.append(expanded_id)
+                                expanded_tool_calls.append(ToolCall(
+                                    id=expanded_id,
+                                    name="use_subagent",
+                                    arguments=json.dumps(new_args)
+                                ))
+                            expansion_map[tc.id] = expanded_ids
+                            continue
+                    except Exception:
+                        pass
+                expanded_tool_calls.append(tc)
+            
+            pending_tool_calls = expanded_tool_calls
+
             # Execute each tool call concurrently and feed results back as they finish.
             import asyncio
             
@@ -223,12 +255,15 @@ class WoolAgent:
                 yield "tool", f"  {dim('└─')} {dim('[Running background task...]')}\r\n\r\n"
 
             # 2. Wait for them as they complete and print results in separate boxes!
+            completed_results: dict[str, str] = {}
             for completed_task in asyncio.as_completed(tasks.values()):
                 tc, args, result_text = await completed_task
 
                 # Cap result length to avoid excessive memory usage.
                 if len(result_text) > 30_000:
                     result_text = result_text[:30_000] + "\n… (truncated)"
+                
+                completed_results[tc.id] = result_text
 
                 # Show immersive full output with ANSI borders for the result
                 output_lines = result_text.splitlines()
@@ -239,11 +274,22 @@ class WoolAgent:
                     yield "tool", f"  {dim('│')} {dim(line)}\r\n"
                 yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
 
+            # 3. Merge expanded tool results back into original tool call IDs
+            for original_tc in original_pending_tool_calls:
+                if original_tc.id in expansion_map:
+                    expanded_ids = expansion_map[original_tc.id]
+                    combined_result = []
+                    for i, exp_id in enumerate(expanded_ids):
+                        combined_result.append(f"--- Subagent {i+1} Output ---\n{completed_results.get(exp_id, '')}")
+                    final_result_text = "\n\n".join(combined_result)
+                else:
+                    final_result_text = completed_results.get(original_tc.id, "")
+
                 self.messages.append(ChatMessage(
                     role="tool",
-                    content=result_text,
-                    tool_call_id=tc.id,
-                    name=tc.name,
+                    content=final_result_text,
+                    tool_call_id=original_tc.id,
+                    name=original_tc.name,
                 ))
                 self.save_session()
 
