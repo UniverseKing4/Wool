@@ -44,8 +44,10 @@ class SlashCommandHandler:
             "/model": self._model,
             "/models": self._models,
             "/session": self._session,
+            "/sessions": self._session,
             "/new": self._new,
             "/rename": self._rename,
+            "/fork": self._fork,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/usage": self._usage,
@@ -74,9 +76,10 @@ class SlashCommandHandler:
             ("/provider list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
-            ("/session", "Open interactive session menu"),
+            ("/session(s)", "Open interactive session menu"),
             ("/new [name]", "Create and switch to a new session"),
             ("/rename <new_name>", "Rename the current session"),
+            ("/fork [name]", "Fork current conversation to a new session"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -377,6 +380,33 @@ class SlashCommandHandler:
             old_path.rename(new_path)
         self.agent.save_session()
         success(f"Session renamed to '{new_name}'.")
+        return False
+
+    async def _fork(self, args: str) -> bool:
+        parts = args.strip().split()
+        if not parts:
+            import time
+            new_name = f"{self.agent.config.active_session}_fork_{int(time.time())}"
+        else:
+            new_name = parts[0]
+            
+        if new_name == self.agent.config.active_session:
+            ansi_error("Cannot fork to the same session name.")
+            return False
+            
+        import copy
+        msgs_copy = copy.deepcopy(self.agent.messages)
+        
+        # Switch session
+        self.agent.save_session()
+        self.agent.config.active_session = new_name
+        self.agent.config.save()
+        self.agent.load_session() # Clears current messages
+        
+        # Restore copied messages
+        self.agent.messages = msgs_copy
+        self.agent.save_session()
+        success(f"Forked conversation to new session '{new_name}'.")
         return False
 
     # ── /usage ────────────────────────────────────────────────────────────
