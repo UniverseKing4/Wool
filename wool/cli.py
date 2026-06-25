@@ -137,8 +137,10 @@ async def run_repl() -> None:
                     sys.stdout.write("\r\033[K")
                     sys.stdout.flush()
 
+        tools_used = 0
+
         async def _consume() -> None:
-            nonlocal printer
+            nonlocal printer, tools_used
             has_reasoned = False
             transitioned = False
             last_chunk_type = None
@@ -182,8 +184,7 @@ async def run_repl() -> None:
 
                     if chunk_type == "text":
                         if has_reasoned and not transitioned:
-                            sys.stdout.write("\n\n")
-                            sys.stdout.flush()
+                            printer.print_chunk("\n\n")
                             transitioned = True
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
@@ -191,6 +192,7 @@ async def run_repl() -> None:
                         sys.stdout.write(dim(gray(chunk)))
                         sys.stdout.flush()
                     elif chunk_type == "tool":
+                        tools_used += 1
                         if has_reasoned and not transitioned:
                             sys.stdout.write("\n\n")
                             sys.stdout.flush()
@@ -228,6 +230,8 @@ async def run_repl() -> None:
                     task.cancel()
                     await task
                 printer.finish()
+                if tools_used > 0:
+                    print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
                 print(f"\n{dim('  (cancelled via Escape)')}")
                 continue
             else:
@@ -238,6 +242,8 @@ async def run_repl() -> None:
                 task.cancel()
                 await task
             printer.finish()
+            if tools_used > 0:
+                print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
             print(f"\n{dim('  (interrupted)')}")
             continue
         finally:
@@ -245,6 +251,8 @@ async def run_repl() -> None:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
         printer.finish()
+        if tools_used > 0:
+            print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
         print()  # spacer after response
         turn += 1
 

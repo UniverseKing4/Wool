@@ -100,7 +100,8 @@ class StreamPrinter:
         return full
 
     def reset(self) -> None:
-        """Clear the internal buffer."""
+        """Reset the printer state."""
         self._buffer.clear()
         self._line_count = 0
+        self._col = 0
         self._started = False
