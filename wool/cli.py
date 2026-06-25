@@ -105,9 +105,30 @@ async def run_repl() -> None:
             if ch == '\x1b' or ch == '\x03':  # Escape or Ctrl+C
                 cancel_event.set()
 
+        first_chunk_received = asyncio.Event()
+
+        async def _spinner() -> None:
+            frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+            i = 0
+            try:
+                while not first_chunk_received.is_set() and not cancel_event.is_set():
+                    sys.stdout.write(f"\r  {cyan(frames[i % len(frames)])} {dim('thinking...')}")
+                    sys.stdout.flush()
+                    try:
+                        await asyncio.wait_for(first_chunk_received.wait(), 0.08)
+                    except asyncio.TimeoutError:
+                        i += 1
+            except asyncio.CancelledError:
+                pass
+            finally:
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
+
         async def _consume() -> None:
             try:
                 async for chunk in agent.process_input(text):
+                    if not first_chunk_received.is_set():
+                        first_chunk_received.set()
                     printer.print_chunk(chunk)
                     if cancel_event.is_set():
                         break
@@ -118,6 +139,7 @@ async def run_repl() -> None:
             tty.setcbreak(fd)
             loop.add_reader(fd, on_input)
             
+            spinner_task = asyncio.create_task(_spinner())
             task = asyncio.create_task(_consume())
             cancel_task = asyncio.create_task(cancel_event.wait())
             
@@ -125,6 +147,10 @@ async def run_repl() -> None:
                 [task, cancel_task],
                 return_when=asyncio.FIRST_COMPLETED
             )
+            
+            if not first_chunk_received.is_set():
+                first_chunk_received.set()
+            await spinner_task
             
             if cancel_event.is_set():
                 if not task.done():
