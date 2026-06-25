@@ -22,6 +22,7 @@ from wool.utils.ansi import (
     green,
     white,
     yellow,
+    gray,
 )
 from wool.utils.streaming import StreamPrinter
 
@@ -133,6 +134,13 @@ async def run_repl() -> None:
                         
                     if chunk_type == "text":
                         printer.print_chunk(chunk)
+                    elif chunk_type == "reasoning":
+                        # Print reasoning directly to stdout in gray.
+                        # Since this happens before StreamPrinter accumulates lines,
+                        # the markdown rewinding will not overwrite the reasoning text!
+                        # We use dim+gray for an elegant "thinking" look.
+                        sys.stdout.write(dim(gray(chunk)))
+                        sys.stdout.flush()
                     elif chunk_type == "tool":
                         printer.finish()
                         sys.stdout.write(chunk)

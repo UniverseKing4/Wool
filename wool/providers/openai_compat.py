@@ -127,6 +127,12 @@ class OpenAICompatProvider(Provider):
                     delta = choices[0].get("delta", {})
                     finish = choices[0].get("finish_reason")
 
+                    # ── reasoning content ──
+                    if delta.get("reasoning_content"):
+                        yield StreamEvent(type="reasoning", content=delta["reasoning_content"])
+                    elif delta.get("reasoning"):
+                        yield StreamEvent(type="reasoning", content=delta["reasoning"])
+
                     # ── text content ──
                     if delta.get("content"):
                         yield StreamEvent(type="text", content=delta["content"])

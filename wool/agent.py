@@ -122,6 +122,7 @@ class WoolAgent:
 
         for iteration in range(1, MAX_TOOL_ITERATIONS + 1):
             accumulated_text = ""
+            accumulated_reasoning = ""
             pending_tool_calls: list[ToolCall] = []
 
             try:
@@ -134,6 +135,9 @@ class WoolAgent:
                     if event.type == "text":
                         accumulated_text += event.content
                         yield "text", event.content
+                    elif event.type == "reasoning":
+                        accumulated_reasoning += event.content
+                        yield "reasoning", event.content
                     elif event.type == "tool_call" and event.tool_call:
                         pending_tool_calls.append(event.tool_call)
                     elif event.type == "error":
@@ -144,9 +148,13 @@ class WoolAgent:
                 return
 
             # Record the assistant turn.
+            final_content = accumulated_text
+            if accumulated_reasoning:
+                final_content = f"<think>\n{accumulated_reasoning}\n</think>\n{final_content}"
+                
             self.messages.append(ChatMessage(
                 role="assistant",
-                content=accumulated_text or None,
+                content=final_content or None,
                 tool_calls=pending_tool_calls or None,
             ))
 
