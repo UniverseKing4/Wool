@@ -11,8 +11,17 @@ from typing import TYPE_CHECKING, Any, Callable, Coroutine
 from wool.config import ProviderConfig
 from wool.providers import OpenAICompatProvider
 from wool.utils.ansi import (
-    bold, cyan, dim, green, magenta, red, white,
-    info, error as ansi_error, success, warning,
+    bold,
+    cyan,
+    dim,
+    green,
+    magenta,
+    red,
+    white,
+    info,
+    error as ansi_error,
+    success,
+    warning,
 )
 
 if TYPE_CHECKING:
@@ -108,7 +117,9 @@ class SlashCommandHandler:
         if sub == "list":
             providers = self.agent.config.providers
             if not providers:
-                warning("No providers configured.  Use /provider add <name> <base_url> <api_key>")
+                warning(
+                    "No providers configured.  Use /provider add <name> <base_url> <api_key>"
+                )
             else:
                 print()
                 for name, pc in providers.items():
@@ -124,7 +135,9 @@ class SlashCommandHandler:
             pc = ProviderConfig(name=name, base_url=base_url, api_key=api_key)
             self.agent.config.add_provider(pc)
             # Register the provider in the runtime registry too.
-            provider = OpenAICompatProvider(name=name, base_url=base_url, api_key=api_key)
+            provider = OpenAICompatProvider(
+                name=name, base_url=base_url, api_key=api_key
+            )
             self.agent.provider_registry.register(provider)
             if self.agent.active_provider is None:
                 self.agent.active_provider = provider
@@ -145,8 +158,12 @@ class SlashCommandHandler:
                 )
                 if self.agent.active_provider:
                     self.agent.config.active_provider = self.agent.active_provider.name
-                    prov_cfg = self.agent.config.providers.get(self.agent.active_provider.name)
-                    self.agent.active_model = prov_cfg.default_model if prov_cfg else None
+                    prov_cfg = self.agent.config.providers.get(
+                        self.agent.active_provider.name
+                    )
+                    self.agent.active_model = (
+                        prov_cfg.default_model if prov_cfg else None
+                    )
                 else:
                     self.agent.config.active_provider = None
                     self.agent.active_model = None
@@ -163,28 +180,30 @@ class SlashCommandHandler:
                 return False
             self.agent.active_provider = p
             self.agent.config.active_provider = name
-            
+
             p_config = self.agent.config.providers.get(name)
             if p_config and p_config.default_model:
                 self.agent.active_model = p_config.default_model
                 self.agent.config.active_model = p_config.default_model
-                
+
             self.agent.config.save()
             success(f"Switched to provider '{name}'.")
         else:
             # Treat as direct provider switch
             p = self.agent.provider_registry.get(sub)
             if not p:
-                ansi_error(f"Provider '{sub}' not found. Try: list, add, remove, switch")
+                ansi_error(
+                    f"Provider '{sub}' not found. Try: list, add, remove, switch"
+                )
                 return False
             self.agent.active_provider = p
             self.agent.config.active_provider = sub
-            
+
             p_config = self.agent.config.providers.get(sub)
             if p_config and p_config.default_model:
                 self.agent.active_model = p_config.default_model
                 self.agent.config.active_model = p_config.default_model
-                
+
             self.agent.config.save()
             success(f"Switched to provider '{sub}'.")
 
@@ -201,8 +220,14 @@ class SlashCommandHandler:
 
         if sub == "show" or not args.strip():
             model = self.agent.active_model or "auto"
-            provider_name = self.agent.active_provider.name if self.agent.active_provider else "none"
-            print(f"\n  {dim('Model:')} {cyan(model)}  {dim('on')} {green(provider_name)}\n")
+            provider_name = (
+                self.agent.active_provider.name
+                if self.agent.active_provider
+                else "none"
+            )
+            print(
+                f"\n  {dim('Model:')} {cyan(model)}  {dim('on')} {green(provider_name)}\n"
+            )
 
         elif sub == "list":
             if not self.agent.active_provider:
@@ -227,8 +252,13 @@ class SlashCommandHandler:
             model_id = parts[1]
             self.agent.active_model = model_id
             self.agent.config.active_model = model_id
-            if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
-                self.agent.config.providers[self.agent.active_provider.name].default_model = model_id
+            if (
+                self.agent.active_provider
+                and self.agent.active_provider.name in self.agent.config.providers
+            ):
+                self.agent.config.providers[
+                    self.agent.active_provider.name
+                ].default_model = model_id
             self.agent.config.save()
             success(f"Model set to '{model_id}'.")
 
@@ -236,8 +266,13 @@ class SlashCommandHandler:
             # Treat as direct model switch.
             self.agent.active_model = sub
             self.agent.config.active_model = sub
-            if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
-                self.agent.config.providers[self.agent.active_provider.name].default_model = sub
+            if (
+                self.agent.active_provider
+                and self.agent.active_provider.name in self.agent.config.providers
+            ):
+                self.agent.config.providers[
+                    self.agent.active_provider.name
+                ].default_model = sub
             self.agent.config.save()
             success(f"Model set to '{sub}'.")
 
@@ -256,7 +291,9 @@ class SlashCommandHandler:
             print(f"\n  {bold('MCP tools')} ({len(mcp_tools)}):")
             for mcp_t in mcp_tools:
                 fn = mcp_t.get("function", {})
-                print(f"    {magenta(fn.get('name', '?')):>30s}  {dim(fn.get('description', '')[:60])}")
+                print(
+                    f"    {magenta(fn.get('name', '?')):>30s}  {dim(fn.get('description', '')[:60])}"
+                )
         print()
         return False
 
@@ -313,6 +350,7 @@ class SlashCommandHandler:
 
     async def _session(self, args: str) -> bool:
         from wool.config import CONFIG_DIR
+
         parts = args.strip().split()
         sub = parts[0] if parts else "list"
         sess_dir = CONFIG_DIR / "sessions"
@@ -320,39 +358,42 @@ class SlashCommandHandler:
         if sub == "list":
             sess_dir.mkdir(parents=True, exist_ok=True)
             from wool.utils.menu import run_session_menu
-            
+
             last_idx = -1
             while True:
                 files = {f.stem for f in sess_dir.glob("*.json")}
                 files.add(self.agent.config.active_session)
                 session_list = sorted(files)
-                
-                result = run_session_menu(session_list, self.agent.config.active_session, initial_idx=last_idx)
+
+                result = run_session_menu(
+                    session_list, self.agent.config.active_session, initial_idx=last_idx
+                )
                 if not result:
                     return False
-                    
+
                 action, selected_name, menu_idx = result
                 if action == "delete":
                     name = selected_name
-                    
+
                     if name == "default":
-                        is_active = (name == self.agent.config.active_session)
+                        is_active = name == self.agent.config.active_session
                         path = self.agent.get_session_path(name)
                         already_cleared = False
-                        
+
                         if is_active:
-                            already_cleared = (len(self.agent.messages) == 0)
+                            already_cleared = len(self.agent.messages) == 0
                         else:
                             if path.exists():
                                 try:
                                     import json
+
                                     data = json.loads(path.read_text(encoding="utf-8"))
-                                    already_cleared = (len(data.get("messages", [])) == 0)
+                                    already_cleared = len(data.get("messages", [])) == 0
                                 except Exception:
                                     already_cleared = True
                             else:
                                 already_cleared = True
-                                
+
                         if already_cleared:
                             info("Session 'default' is already completely cleared.")
                         else:
@@ -360,12 +401,15 @@ class SlashCommandHandler:
                                 self.agent.clear_history()
                             else:
                                 if path.exists():
-                                    path.write_text('{"messages": [], "total_usage": {}}\n', encoding="utf-8")
+                                    path.write_text(
+                                        '{"messages": [], "total_usage": {}}\n',
+                                        encoding="utf-8",
+                                    )
                             success("Session 'default' history cleared.")
-                            
+
                         last_idx = menu_idx
                         continue
-                        
+
                     path = self.agent.get_session_path(name)
                     if path.exists():
                         path.unlink()
@@ -374,7 +418,7 @@ class SlashCommandHandler:
                         ansi_error(f"Session '{name}' not found.")
                         last_idx = menu_idx
                         continue
-                        
+
                     if name == self.agent.config.active_session:
                         if name != "default":
                             self.agent.config.active_session = "default"
@@ -383,13 +427,13 @@ class SlashCommandHandler:
                             success("Switched to session 'default'.")
                         else:
                             self.agent.clear_history()
-                            
+
                     # Update index to stay in place. Since the element is deleted,
                     # the next item shifts into menu_idx. If we deleted the last item,
                     # menu_idx is now out of bounds, so we cap it.
                     last_idx = min(menu_idx, len(session_list) - 2)
                     last_idx = max(0, last_idx)
-                    
+
                 else:
                     self.agent.save_session()
                     self.agent.config.active_session = selected_name
@@ -402,14 +446,15 @@ class SlashCommandHandler:
         elif sub == "new":
             if len(parts) < 2:
                 import time
+
                 name = f"session_{int(time.time())}"
             else:
                 name = parts[1]
-                
+
             if name == self.agent.config.active_session:
                 info(f"Already in session '{name}'.")
                 return False
-                
+
             self.agent.save_session()
             self.agent.config.active_session = name
             self.agent.config.save()
@@ -445,23 +490,25 @@ class SlashCommandHandler:
         parts = args.strip().split()
         if not parts:
             import time
+
             new_name = f"{self.agent.config.active_session}_fork_{int(time.time())}"
         else:
             new_name = parts[0]
-            
+
         if new_name == self.agent.config.active_session:
             ansi_error("Cannot fork to the same session name.")
             return False
-            
+
         import copy
+
         msgs_copy = copy.deepcopy(self.agent.messages)
-        
+
         # Switch session
         self.agent.save_session()
         self.agent.config.active_session = new_name
         self.agent.config.save()
-        self.agent.load_session() # Clears current messages
-        
+        self.agent.load_session()  # Clears current messages
+
         # Restore copied messages
         self.agent.messages = msgs_copy
         self.agent.save_session()
@@ -474,7 +521,7 @@ class SlashCommandHandler:
         if not args.strip():
             ansi_error("Usage: /goal <task description>")
             return False
-            
+
         prompt = f"""[GOAL MODE ACTIVATED]
 Your overarching goal is: {args.strip()}
 
@@ -485,15 +532,18 @@ If the goal is NOT finished, you MUST output the exact string `<CONTINUE>` at th
 If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
 """
         import readline
+
         try:
+
             def pre_input_hook():
                 readline.insert_text(prompt)
                 readline.redisplay()
                 readline.set_pre_input_hook(None)
+
             readline.set_pre_input_hook(pre_input_hook)
         except ImportError:
             pass
-            
+
         success(f"Goal mode primed! Press Enter to start: '{args.strip()}'")
         return False
 
@@ -503,15 +553,17 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         prompt = self.agent.total_usage.get("prompt_tokens", 0)
         completion = self.agent.total_usage.get("completion_tokens", 0)
         total = self.agent.total_usage.get("total_tokens", prompt + completion)
-        
+
         current_ctx = 0
         for msg in reversed(self.agent.messages):
             if msg.role == "assistant" and getattr(msg, "usage", None):
                 usage = msg.usage
                 if usage:
-                    current_ctx = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
+                    current_ctx = usage.get("prompt_tokens", 0) + usage.get(
+                        "completion_tokens", 0
+                    )
                 break
-        
+
         print()
         print(f"  {bold(cyan('Session Token Usage (Dynamic)'))}")
         print(f"  {dim('Cumulative Prompt:')}     {prompt:,}")
@@ -530,34 +582,37 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
             if not text:
                 return 0
             return max(1, len(text) // 4)
-            
+
         import json
-        
+
         user_msgs = 0
         agent_resp = 0
         tool_calls = 0
-        
+
         for msg in self.agent.messages:
             if msg.role == "user":
                 user_msgs += est_tokens(msg.content)
             elif msg.role == "assistant":
-                # For context weight, we use character count estimation instead of 
-                # generated tokens, because generated tokens reflect output effort, 
+                # For context weight, we use character count estimation instead of
+                # generated tokens, because generated tokens reflect output effort,
                 # whereas input tokens reflect string length.
                 agent_resp += est_tokens(msg.content)
                 if getattr(msg, "tool_calls", None):
                     try:
                         tc_list = msg.tool_calls
                         if tc_list:
-                            tool_calls += est_tokens(json.dumps([tc.to_dict() for tc in tc_list]))
+                            tool_calls += est_tokens(
+                                json.dumps([tc.to_dict() for tc in tc_list])
+                            )
                     except Exception:
                         pass
             elif msg.role == "tool":
                 tool_calls += est_tokens(msg.content)
-                
+
         from wool.agent import SYSTEM_PROMPT
+
         sys_prompt = est_tokens(SYSTEM_PROMPT)
-        
+
         try:
             builtin_schemas = []
             subagent_schemas = []
@@ -572,23 +627,37 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         except Exception:
             builtin_tools = 0
             subagents = 0
-            
+
         try:
             mcp_tools = est_tokens(json.dumps(self.agent.mcp_manager.get_all_tools()))
         except Exception:
             mcp_tools = 0
-            
-        total = user_msgs + agent_resp + tool_calls + sys_prompt + builtin_tools + subagents + mcp_tools
-        
+
+        total = (
+            user_msgs
+            + agent_resp
+            + tool_calls
+            + sys_prompt
+            + builtin_tools
+            + subagents
+            + mcp_tools
+        )
+
         print()
         print(f"  {bold(cyan('Context Breakdown (Estimated Tokens)'))}")
         print(f"  {dim('Total:')}             {bold(f'{total:,}')} {dim('tokens')}")
         print(f"  {green('◉')} {dim('User messages:')}   {user_msgs:,} {dim('tokens')}")
-        print(f"  {green('◉')} {dim('Agent responses:')} {agent_resp:,} {dim('tokens')}")
-        print(f"  {green('◉')} {dim('Tool calls:')}      {tool_calls:,} {dim('tokens')}")
+        print(
+            f"  {green('◉')} {dim('Agent responses:')} {agent_resp:,} {dim('tokens')}"
+        )
+        print(
+            f"  {green('◉')} {dim('Tool calls:')}      {tool_calls:,} {dim('tokens')}"
+        )
         print(f"  {dim('□')}")
         print(f"  {cyan('⛁')} {dim('System prompt:')}   {sys_prompt:,} {dim('tokens')}")
-        print(f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,} {dim('tokens')}")
+        print(
+            f"  {cyan('⛁')} {dim('Built-in tools:')}  {builtin_tools:,} {dim('tokens')}"
+        )
         print(f"  {cyan('⛁')} {dim('Subagents:')}       {subagents:,} {dim('tokens')}")
         print(f"  {cyan('⛁')} {dim('MCP tools:')}       {mcp_tools:,} {dim('tokens')}")
         print()
@@ -607,7 +676,7 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         msgs = self.agent.messages
         system = [m for m in msgs if m.role == "system"]
         others = [m for m in msgs if m.role != "system"]
-        
+
         def is_real_user(m):
             if m.role != "user":
                 return False
@@ -615,73 +684,90 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
                 return True
             if "Tool execution complete. Please continue" in m.content:
                 return False
-            if "The background subagents have finished. Here are their final results:" in m.content:
+            if (
+                "The background subagents have finished. Here are their final results:"
+                in m.content
+            ):
                 return False
             return True
-            
+
         # Find real user message indices
         user_msg_indices = [i for i, m in enumerate(others) if is_real_user(m)]
         if not user_msg_indices:
             info("No user messages to compact.")
             return False
-            
+
         start_idx = user_msg_indices[-1]
         last_user_msg = others[start_idx]
-        
+
         # Find the final assistant response text
         last_assistant_msg = None
         for m in reversed(others[start_idx:]):
             if m.role == "assistant" and m.content:
                 last_assistant_msg = m
                 break
-                
+
         from wool.providers.base import ChatMessage
+
         recent = [last_user_msg]
         if last_assistant_msg:
             # Strip tool calls to make it a pure text response
-            clean_ast = ChatMessage(role="assistant", content=last_assistant_msg.content)
+            clean_ast = ChatMessage(
+                role="assistant", content=last_assistant_msg.content
+            )
             recent.append(clean_ast)
-            
+
         # Everything else (older messages, tool calls, tool results) goes into the summary
-        older_messages = [m for m in others if m is not last_user_msg and m is not last_assistant_msg]
-        
+        older_messages = [
+            m for m in others if m is not last_user_msg and m is not last_assistant_msg
+        ]
+
         if not older_messages:
             info("History is already perfectly compact.")
             return False
-        
+
         info("Summarizing older messages...")
         import json
+
         summary_prompt = "Please summarize the following conversation concisely:\n\n"
         for m in older_messages:
-            summary_prompt += json.dumps(m.to_dict(), indent=2, ensure_ascii=False) + "\n\n"
-            
+            summary_prompt += (
+                json.dumps(m.to_dict(), indent=2, ensure_ascii=False) + "\n\n"
+            )
+
         from wool.providers.base import ChatMessage
+
         temp_msgs = system + [ChatMessage(role="user", content=summary_prompt)]
-        
+
         if not self.agent.active_provider:
             ansi_error("No active provider.")
             return False
-            
+
         model = self.agent.active_model or "auto"
         try:
             summary_text = ""
-            async for ev in self.agent.active_provider.chat_completion_stream(temp_msgs, model):
+            async for ev in self.agent.active_provider.chat_completion_stream(
+                temp_msgs, model
+            ):
                 if ev.type == "text":
                     summary_text += ev.content
-                    
+
             summary_msg = ChatMessage(
                 role="system",
-                content=f"Summary of previous conversation:\n{summary_text.strip()}"
+                content=f"Summary of previous conversation:\n{summary_text.strip()}",
             )
-            
+
             from wool.utils.markdown import render_markdown
-            print(f"\n{bold(magenta('Compact Summary:'))}\n{render_markdown(summary_text.strip())}\n")
-            
+
+            print(
+                f"\n{bold(magenta('Compact Summary:'))}\n{render_markdown(summary_text.strip())}\n"
+            )
+
             self.agent.messages = system + [summary_msg] + recent
             success(f"Compacted to {len(recent)} messages and 1 summary.")
         except Exception as e:
             ansi_error(f"Failed to summarize: {e}")
-            
+
         return False
 
     # ── /status ───────────────────────────────────────────────────────────
@@ -708,47 +794,52 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
 
     async def _rewind(self, _args: str) -> bool:
         from wool.utils.menu import run_rewind_menu
-        
+
         # Build list of user messages
         user_msgs = []
         for i, m in enumerate(self.agent.messages):
             if m.role == "user" and m.content:
                 if "Tool execution complete. Please continue" in m.content:
                     continue
-                if "The background subagents have finished. Here are their final results:" in m.content:
+                if (
+                    "The background subagents have finished. Here are their final results:"
+                    in m.content
+                ):
                     continue
                 # Replace newlines with spaces and truncate for display
                 snippet = " ".join(m.content.split())
                 if len(snippet) > 60:
                     snippet = snippet[:57] + "..."
                 user_msgs.append((i, snippet))
-                
+
         if not user_msgs:
             warning("No user messages found in this session.")
             return False
-            
+
         target_idx = run_rewind_menu(user_msgs)
         if target_idx is None:
             return False
-            
+
         selected_user_msg = self.agent.messages[target_idx].content
-            
+
         # Drop the selected message and everything after it
         self.agent.messages = self.agent.messages[:target_idx]
         self.agent.save_session()
-        
+
         if selected_user_msg:
             try:
                 import readline
+
                 def pre_input_hook():
                     readline.insert_text(selected_user_msg)
                     readline.redisplay()
                     readline.set_pre_input_hook(None)
+
                 readline.set_pre_input_hook(pre_input_hook)
             except ImportError:
                 # Fallback if readline is not available (e.g. Windows)
                 pass
-                
+
         success("Conversation history rewound successfully.")
         return False
 
@@ -761,32 +852,33 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
             if msg.role == "assistant" and msg.content:
                 last_msg = msg.content
                 break
-                
+
         if not last_msg:
             warning("No AI response found to copy.")
             return False
-            
+
         import sys
         import base64
-        
+
         # 1. Try OSC 52 (works over SSH/Codespaces)
         try:
-            b64 = base64.b64encode(last_msg.encode('utf-8')).decode('utf-8')
+            b64 = base64.b64encode(last_msg.encode("utf-8")).decode("utf-8")
             # Send OSC 52 copy command to the terminal
             sys.stdout.write(f"\033]52;c;{b64}\a")
             sys.stdout.flush()
         except Exception:
             pass
-            
+
         # 2. Try Pyperclip as fallback for local desktop users
         try:
             import pyperclip
+
             pyperclip.copy(last_msg)
         except Exception:
-            # We don't print the pyperclip error anymore because OSC 52 likely succeeded 
+            # We don't print the pyperclip error anymore because OSC 52 likely succeeded
             # if they are in a terminal that supports it, or if they are headless they don't care.
             pass
-            
+
         success("Copied the last AI response to clipboard.")
         return False
 

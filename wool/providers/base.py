@@ -53,7 +53,7 @@ class ChatMessage:
             tool_calls=tcs,
             tool_call_id=data.get("tool_call_id"),
             name=data.get("name"),
-            usage=data.get("usage")
+            usage=data.get("usage"),
         )
 
 
@@ -78,7 +78,7 @@ class ToolCall:
         return cls(
             id=data["id"],
             name=func.get("name", ""),
-            arguments=func.get("arguments", "")
+            arguments=func.get("arguments", ""),
         )
 
 

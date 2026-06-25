@@ -22,13 +22,21 @@ _SYMBOL_PATTERNS: dict[str, str] = {
 }
 
 _EXT_TO_LANG: dict[str, str] = {
-    ".py": "python", ".pyw": "python",
-    ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".tsx": "typescript", ".jsx": "javascript",
+    ".py": "python",
+    ".pyw": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".jsx": "javascript",
     ".go": "go",
     ".rs": "rust",
     ".java": "java",
-    ".c": "c", ".h": "c", ".cpp": "c", ".hpp": "c",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "c",
+    ".hpp": "c",
 }
 
 
@@ -51,30 +59,39 @@ class CodeIntelligence(Tool):
     def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
-                name="action", type="string",
+                name="action",
+                type="string",
                 description="Action to perform.",
                 enum=[
-                    "search_symbols", "lookup_symbol", "document_symbols",
-                    "pattern_search", "codebase_overview", "codebase_map",
+                    "search_symbols",
+                    "lookup_symbol",
+                    "document_symbols",
+                    "pattern_search",
+                    "codebase_overview",
+                    "codebase_map",
                 ],
             ),
             ToolParameter(
-                name="query", type="string",
+                name="query",
+                type="string",
                 description="Symbol name or search query.",
                 required=False,
             ),
             ToolParameter(
-                name="path", type="string",
+                name="path",
+                type="string",
                 description="File or directory path.",
                 required=False,
             ),
             ToolParameter(
-                name="pattern", type="string",
+                name="pattern",
+                type="string",
                 description="Regex pattern (pattern_search).",
                 required=False,
             ),
             ToolParameter(
-                name="language", type="string",
+                name="language",
+                type="string",
                 description="Filter by language (e.g. python, go, rust).",
                 required=False,
             ),
@@ -92,7 +109,9 @@ class CodeIntelligence(Tool):
         }
         fn = dispatch.get(action)
         if not fn:
-            return ToolResult(success=False, output="", error=f"Unknown action: {action}")
+            return ToolResult(
+                success=False, output="", error=f"Unknown action: {action}"
+            )
         return await fn(kwargs)
 
     # ── search_symbols ────────────────────────────────────────────────────
@@ -119,7 +138,9 @@ class CodeIntelligence(Tool):
             return ToolResult(success=False, output="", error=f"Not a file: {p}")
 
         lang = kw.get("language") or _EXT_TO_LANG.get(p.suffix, "")
-        pat_str = _SYMBOL_PATTERNS.get(lang, r"^\s*(?:class|def|function|func|struct|type)\s+(\w+)")
+        pat_str = _SYMBOL_PATTERNS.get(
+            lang, r"^\s*(?:class|def|function|func|struct|type)\s+(\w+)"
+        )
         pat = re.compile(pat_str, re.MULTILINE)
 
         try:
@@ -154,12 +175,23 @@ class CodeIntelligence(Tool):
         path = kw.get("path", ".")
         root = Path(path).resolve()
         if not root.is_dir():
-            return ToolResult(success=False, output="", error=f"Not a directory: {root}")
+            return ToolResult(
+                success=False, output="", error=f"Not a directory: {root}"
+            )
 
         ext_counts: dict[str, int] = {}
         total_files = 0
         total_lines = 0
-        skip = {".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build"}
+        skip = {
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv",
+            "venv",
+            ".tox",
+            "dist",
+            "build",
+        }
 
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if d not in skip]
@@ -174,7 +206,10 @@ class CodeIntelligence(Tool):
                 except OSError:
                     pass
 
-        lines_parts = [f"  {ext:>12}: {c:>6} files" for ext, c in sorted(ext_counts.items(), key=lambda x: -x[1])[:20]]
+        lines_parts = [
+            f"  {ext:>12}: {c:>6} files"
+            for ext, c in sorted(ext_counts.items(), key=lambda x: -x[1])[:20]
+        ]
         overview = (
             f"Codebase: {root}\n"
             f"Total files: {total_files}\n"
@@ -189,9 +224,20 @@ class CodeIntelligence(Tool):
         path = kw.get("path", ".")
         root = Path(path).resolve()
         if not root.is_dir():
-            return ToolResult(success=False, output="", error=f"Not a directory: {root}")
+            return ToolResult(
+                success=False, output="", error=f"Not a directory: {root}"
+            )
 
-        skip = {".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build"}
+        skip = {
+            ".git",
+            "node_modules",
+            "__pycache__",
+            ".venv",
+            "venv",
+            ".tox",
+            "dist",
+            "build",
+        }
         lines: list[str] = [f"{root.name}/"]
         self._tree(root, lines, "", skip, depth=0, max_depth=4)
         if len(lines) > 500:
@@ -200,20 +246,29 @@ class CodeIntelligence(Tool):
         return ToolResult(success=True, output="\n".join(lines))
 
     def _tree(
-        self, d: Path, out: list[str], prefix: str,
-        skip: set[str], depth: int, max_depth: int,
+        self,
+        d: Path,
+        out: list[str],
+        prefix: str,
+        skip: set[str],
+        depth: int,
+        max_depth: int,
     ) -> None:
         if depth >= max_depth:
             return
         try:
-            children = sorted(d.iterdir(), key=lambda c: (not c.is_dir(), c.name.lower()))
+            children = sorted(
+                d.iterdir(), key=lambda c: (not c.is_dir(), c.name.lower())
+            )
         except PermissionError:
             return
         children = [c for c in children if c.name not in skip]
         for i, child in enumerate(children):
             is_last = i == len(children) - 1
             connector = "└── " if is_last else "├── "
-            out.append(f"{prefix}{connector}{child.name}{'/' if child.is_dir() else ''}")
+            out.append(
+                f"{prefix}{connector}{child.name}{'/' if child.is_dir() else ''}"
+            )
             if child.is_dir():
                 extension = "    " if is_last else "│   "
                 self._tree(child, out, prefix + extension, skip, depth + 1, max_depth)
@@ -221,10 +276,19 @@ class CodeIntelligence(Tool):
     # ── shared grep helper ────────────────────────────────────────────────
 
     async def _grep(self, pattern: str, path: str) -> ToolResult:
-        cmd = ["grep", "-rnI", "--color=never", "-E", pattern, str(Path(path).resolve())]
+        cmd = [
+            "grep",
+            "-rnI",
+            "--color=never",
+            "-E",
+            pattern,
+            str(Path(path).resolve()),
+        ]
         try:
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
             text = stdout.decode(errors="replace")

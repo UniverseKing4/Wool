@@ -60,7 +60,7 @@ def _print_banner(agent: WoolAgent) -> None:
 def _prompt(turn: int) -> str:
     if not sys.stdout.isatty():
         return f"  {turn} wool › "
-        
+
     # Readline requires \001 and \002 around non-printable ANSI escape sequences
     # to calculate the visible width of the prompt correctly. If omitted, typing
     # long strings will wrap incorrectly and overwrite the prompt.
@@ -85,20 +85,21 @@ async def run_repl() -> None:
     _print_banner(agent)
 
     typeahead_buffer: list[str] = []
-    
+
     def _pre_input_hook() -> None:
         if typeahead_buffer:
             text = "".join(typeahead_buffer)
             readline.insert_text(text)
             readline.redisplay()
             typeahead_buffer.clear()
-            
+
     readline.set_pre_input_hook(_pre_input_hook)
     readline.parse_and_bind("set disable-completion on")
 
     auto_next_text = None
-    
+
     while True:
+
         def is_real_user(m):
             if m.role != "user":
                 return False
@@ -106,11 +107,15 @@ async def run_repl() -> None:
                 return True
             if "Tool execution complete. Please continue" in m.content:
                 return False
-            if "The background subagents have finished. Here are their final results:" in m.content:
+            if (
+                "The background subagents have finished. Here are their final results:"
+                in m.content
+            ):
                 return False
             return True
+
         turn = sum(1 for m in agent.messages if is_real_user(m)) + 1
-        
+
         # ── read ──
         if auto_next_text:
             text = auto_next_text
@@ -131,9 +136,9 @@ async def run_repl() -> None:
                 break
             finally:
                 signal.signal(signal.SIGINT, old_handler)
-    
+
             text = user_input.strip()
-            
+
         if not text:
             continue
 
@@ -147,20 +152,21 @@ async def run_repl() -> None:
         # ── eval / print ──
         print()
         printer = StreamPrinter()
-        
+
         loop = asyncio.get_running_loop()
         cancel_event = asyncio.Event()
-        
+
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
-        
+
         def on_input() -> None:
             ch = sys.stdin.read(1)
-            if ch == '\x03':  # Ctrl+C
+            if ch == "\x03":  # Ctrl+C
                 cancel_event.set()
                 typeahead_buffer.clear()
-            elif ch == '\x1b':  # Escape or start of escape sequence
+            elif ch == "\x1b":  # Escape or start of escape sequence
                 import select
+
                 r, _, _ = select.select([sys.stdin.fileno()], [], [], 0.05)
                 if r:
                     # It's an escape sequence (e.g. arrow keys), read and discard it
@@ -169,10 +175,10 @@ async def run_repl() -> None:
                     # It's a plain Escape key press
                     cancel_event.set()
                     typeahead_buffer.clear()
-            elif ch in ('\x7f', '\b'):  # Backspace
+            elif ch in ("\x7f", "\b"):  # Backspace
                 if typeahead_buffer:
                     typeahead_buffer.pop()
-            elif ch.isprintable() or ch == ' ':
+            elif ch.isprintable() or ch == " ":
                 typeahead_buffer.append(ch)
 
         is_thinking = asyncio.Event()
@@ -185,7 +191,9 @@ async def run_repl() -> None:
             try:
                 while not cancel_event.is_set():
                     if is_thinking.is_set():
-                        sys.stdout.write(f"\r  {cyan(frames[i % len(frames)])} {dim('thinking...')}")
+                        sys.stdout.write(
+                            f"\r  {cyan(frames[i % len(frames)])} {dim('thinking...')}"
+                        )
                         sys.stdout.flush()
                         spinner_active = True
                         i += 1
@@ -196,7 +204,10 @@ async def run_repl() -> None:
                     else:
                         wait_think = asyncio.create_task(is_thinking.wait())
                         wait_cancel = asyncio.create_task(cancel_event.wait())
-                        await asyncio.wait([wait_think, wait_cancel], return_when=asyncio.FIRST_COMPLETED)
+                        await asyncio.wait(
+                            [wait_think, wait_cancel],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
                         if not wait_think.done():
                             wait_think.cancel()
                         if not wait_cancel.done():
@@ -223,13 +234,13 @@ async def run_repl() -> None:
                 while True:
                     next_task = asyncio.create_task(iterator.__anext__())  # type: ignore
                     cancel_wait = asyncio.create_task(cancel_event.wait())
-                    
+
                     done, _ = await asyncio.wait(
-                        [next_task, cancel_wait], 
-                        timeout=0.2, 
-                        return_when=asyncio.FIRST_COMPLETED
+                        [next_task, cancel_wait],
+                        timeout=0.2,
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
-                    
+
                     if cancel_event.is_set():
                         break
 
@@ -238,15 +249,15 @@ async def run_repl() -> None:
                         # This prevents the spinner from corrupting the current line if the network lags mid-sentence.
                         if last_chunk_type in (None, "tool"):
                             is_thinking.set()
-                            
+
                         inner_cancel_wait = asyncio.create_task(cancel_event.wait())
                         await asyncio.wait(
-                            [next_task, inner_cancel_wait], 
-                            return_when=asyncio.FIRST_COMPLETED
+                            [next_task, inner_cancel_wait],
+                            return_when=asyncio.FIRST_COMPLETED,
                         )
                         if not inner_cancel_wait.done():
                             inner_cancel_wait.cancel()
-                            
+
                         if cancel_event.is_set():
                             break
 
@@ -261,12 +272,12 @@ async def run_repl() -> None:
                             sys.stdout.write("\r" + " " * 30 + "\r")
                             sys.stdout.flush()
                         break
-                        
+
                     if is_thinking.is_set():
                         is_thinking.clear()
                         sys.stdout.write("\r" + " " * 30 + "\r")
                         sys.stdout.flush()
-                        
+
                     chunk_type, chunk = chunk_tuple
 
                     if chunk_type == "text":
@@ -290,10 +301,10 @@ async def run_repl() -> None:
                         printer.finish()
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
-                        
+
                         has_reasoned = False
                         transitioned = False
-                        
+
                     last_chunk_type = chunk_type
             except asyncio.CancelledError:
                 pass
@@ -314,11 +325,15 @@ async def run_repl() -> None:
                     sys.stdout.write("\r\n")
                     sys.stdout.flush()
                 printer.finish()
-                
+
                 latency = time.time() - start_time
                 if tools_used > 0:
-                    tool_str = f"Executed {tools_used} tool{'s' if tools_used != 1 else ''}"
-                    sys.stdout.write(f"\r\n  {dim(f'({tool_str} • {latency:.1f}s)')}\r\n")
+                    tool_str = (
+                        f"Executed {tools_used} tool{'s' if tools_used != 1 else ''}"
+                    )
+                    sys.stdout.write(
+                        f"\r\n  {dim(f'({tool_str} • {latency:.1f}s)')}\r\n"
+                    )
                 else:
                     sys.stdout.write(f"\r\n  {dim(f'({latency:.1f}s)')}\r\n")
                 sys.stdout.flush()
@@ -326,23 +341,20 @@ async def run_repl() -> None:
         try:
             tty.setcbreak(fd)
             loop.add_reader(fd, on_input)
-            
+
             spinner_task = asyncio.create_task(_spinner())
             task = asyncio.create_task(_consume())
             cancel_task = asyncio.create_task(cancel_event.wait())
-            
-            await asyncio.wait(
-                [task, cancel_task],
-                return_when=asyncio.FIRST_COMPLETED
-            )
-            
+
+            await asyncio.wait([task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
+
             user_cancelled = cancel_event.is_set()
-            
+
             cancel_event.set()
             if is_thinking.is_set():
                 is_thinking.clear()
             await spinner_task
-            
+
             if user_cancelled:
                 auto_next_text = None
                 if not task.done():
@@ -355,14 +367,18 @@ async def run_repl() -> None:
                 print(f"\r\n{dim('  (cancelled via Escape)')}")
                 continue
             else:
-                if agent.messages and agent.messages[-1].role == "assistant" and agent.messages[-1].content:
+                if (
+                    agent.messages
+                    and agent.messages[-1].role == "assistant"
+                    and agent.messages[-1].content
+                ):
                     if "<CONTINUE>" in agent.messages[-1].content:
                         auto_next_text = "<CONTINUE>"
                 try:
                     await task  # raise any exceptions
                 except asyncio.CancelledError:
                     pass
-                
+
         except KeyboardInterrupt:
             if not task.done():
                 task.cancel()

@@ -31,36 +31,45 @@ class FileSystemWrite(Tool):
     @property
     def parameters(self) -> list[ToolParameter]:
         return [
-            ToolParameter(name="path", type="string", description="Absolute file path."),
             ToolParameter(
-                name="mode", type="string",
+                name="path", type="string", description="Absolute file path."
+            ),
+            ToolParameter(
+                name="mode",
+                type="string",
                 description="Write mode.",
                 enum=["create", "str_replace", "insert", "append"],
             ),
             ToolParameter(
-                name="content", type="string",
+                name="content",
+                type="string",
                 description="Content for create / insert / append.",
                 required=False,
             ),
             ToolParameter(
-                name="old_str", type="string",
+                name="old_str",
+                type="string",
                 description="Exact string to find (str_replace mode).",
                 required=False,
             ),
             ToolParameter(
-                name="new_str", type="string",
+                name="new_str",
+                type="string",
                 description="Replacement string (str_replace mode).",
                 required=False,
             ),
             ToolParameter(
-                name="line", type="integer",
+                name="line",
+                type="integer",
                 description="Line number for insert mode (1-indexed).",
                 required=False,
             ),
             ToolParameter(
-                name="create_dirs", type="boolean",
+                name="create_dirs",
+                type="boolean",
                 description="Auto-create parent directories (default true).",
-                required=False, default=True,
+                required=False,
+                default=True,
             ),
         ]
 
@@ -76,7 +85,8 @@ class FileSystemWrite(Tool):
         for prefix in _FORBIDDEN_PREFIXES:
             if str(p).startswith(prefix):
                 return ToolResult(
-                    success=False, output="",
+                    success=False,
+                    output="",
                     error=f"Writing to {prefix} is forbidden.",
                 )
 
@@ -94,6 +104,7 @@ class FileSystemWrite(Tool):
 
     async def _create(self, p: Path, kw: dict) -> ToolResult:
         import asyncio
+
         content = kw.get("content", "")
         create_dirs = kw.get("create_dirs", True)
         if content is None:
@@ -104,12 +115,16 @@ class FileSystemWrite(Tool):
         else:
             exists = await asyncio.to_thread(p.parent.exists)
             if not exists:
-                return ToolResult(success=False, output="", error=f"Parent dir missing: {p.parent}")
+                return ToolResult(
+                    success=False, output="", error=f"Parent dir missing: {p.parent}"
+                )
 
         try:
             async with aiofiles.open(p, "w", encoding="utf-8") as f:
                 await f.write(content)
-            return ToolResult(success=True, output=f"Created {p} ({len(content)} chars)")
+            return ToolResult(
+                success=True, output=f"Created {p} ({len(content)} chars)"
+            )
         except OSError as exc:
             return ToolResult(success=False, output="", error=str(exc))
 
@@ -124,6 +139,7 @@ class FileSystemWrite(Tool):
             new_str = ""
 
         import asyncio
+
         exists = await asyncio.to_thread(p.exists)
         if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
@@ -138,10 +154,13 @@ class FileSystemWrite(Tool):
 
         count = text.count(old_str)
         if count == 0:
-            return ToolResult(success=False, output="", error="old_str not found in file.")
+            return ToolResult(
+                success=False, output="", error="old_str not found in file."
+            )
         if count > 1:
             return ToolResult(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"old_str matches {count} locations — must be unique.",
             )
 
@@ -159,6 +178,7 @@ class FileSystemWrite(Tool):
         content = kw.get("content", "")
         line_no = int(kw.get("line", 1))
         import asyncio
+
         exists = await asyncio.to_thread(p.exists)
         if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
@@ -187,13 +207,16 @@ class FileSystemWrite(Tool):
     async def _append(self, p: Path, kw: dict) -> ToolResult:
         content = kw.get("content", "")
         import asyncio
+
         exists = await asyncio.to_thread(p.exists)
         if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
         try:
             async with aiofiles.open(p, "a", encoding="utf-8") as f:
                 await f.write(content)
-            return ToolResult(success=True, output=f"Appended {len(content)} chars to {p}")
+            return ToolResult(
+                success=True, output=f"Appended {len(content)} chars to {p}"
+            )
         except OSError as exc:
             return ToolResult(success=False, output="", error=str(exc))
 
@@ -203,6 +226,7 @@ class FileSystemWrite(Tool):
     async def _backup(p: Path) -> None:
         """Create a .wool.bak backup before destructive edits."""
         import asyncio
+
         bak = p.with_suffix(p.suffix + ".wool.bak")
         try:
             await asyncio.to_thread(shutil.copy2, p, bak)

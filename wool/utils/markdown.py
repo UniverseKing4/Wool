@@ -71,9 +71,15 @@ _INLINE_RULES: list[tuple[re.Pattern[str], str]] = [
     # Inline code  `code`
     (re.compile(r"`([^`\n]+)`"), rf"{_BG_GRAY}{_FG_CYAN}\1{_RST}"),
     # Links  [text](url)
-    (re.compile(r"\[([^\]]+)\]\(([^)]+)\)"), rf"{_ULINE}{_FG_BLUE}\1{_RST} {_DIM}(\2){_RST}"),
+    (
+        re.compile(r"\[([^\]]+)\]\(([^)]+)\)"),
+        rf"{_ULINE}{_FG_BLUE}\1{_RST} {_DIM}(\2){_RST}",
+    ),
     # Images  ![alt](url)
-    (re.compile(r"!\[([^\]]*)\]\(([^)]+)\)"), rf"{_FG_MAGENTA}🖼  \1{_RST} {_DIM}(\2){_RST}"),
+    (
+        re.compile(r"!\[([^\]]*)\]\(([^)]+)\)"),
+        rf"{_FG_MAGENTA}🖼  \1{_RST} {_DIM}(\2){_RST}",
+    ),
 ]
 
 
@@ -97,18 +103,20 @@ _FENCE_RE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)")
 _TABLE_SEP_RE = re.compile(r"^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$")
 
 _HEADING_COLORS = [
-    _FG_CYAN + _BOLD,      # h1
-    _FG_GREEN + _BOLD,     # h2
-    _FG_YELLOW + _BOLD,    # h3
-    _FG_BLUE + _BOLD,      # h4
-    _FG_MAGENTA + _BOLD,   # h5
-    _FG_WHITE + _BOLD,     # h6
+    _FG_CYAN + _BOLD,  # h1
+    _FG_GREEN + _BOLD,  # h2
+    _FG_YELLOW + _BOLD,  # h3
+    _FG_BLUE + _BOLD,  # h4
+    _FG_MAGENTA + _BOLD,  # h5
+    _FG_WHITE + _BOLD,  # h6
 ]
 
 _LIST_BULLETS = ["●", "○", "◦", "·"]
 
 
-def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str = "") -> str:
+def render_markdown(
+    text: str, *, stream: TextIO | None = None, base_style: str = ""
+) -> str:
     """Render *text* (markdown) to ANSI-styled terminal output.
 
     If *stream* is given the rendered output is also written there.
@@ -129,17 +137,22 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
             i += 1
             code_lines: list[str] = []
             while i < len(lines):
-                if _FENCE_RE.match(lines[i]) and lines[i].strip().startswith(fence_char[:3]):
+                if _FENCE_RE.match(lines[i]) and lines[i].strip().startswith(
+                    fence_char[:3]
+                ):
                     i += 1
                     break
                 code_lines.append(lines[i])
                 i += 1
             # Render code block
             if lang:
-                out.append(f"  {_a(_DIM)}┌─ {lang} ─{'─' * max(0, 40 - len(lang))}┐{_a(_RST)}")
+                out.append(
+                    f"  {_a(_DIM)}┌─ {lang} ─{'─' * max(0, 40 - len(lang))}┐{_a(_RST)}"
+                )
             else:
                 out.append(f"  {_a(_DIM)}┌{'─' * 44}┐{_a(_RST)}")
             from wool.utils.syntax import highlight_code
+
             for cl in code_lines:
                 hl_line = highlight_code(cl, lang)
                 styled = f"  {_a(_DIM)}│{_a(_RST)} {_a(_BG_GRAY)}{hl_line}{_a(_RST)}"
@@ -181,7 +194,9 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
         bm = _BLOCKQUOTE_RE.match(line)
         if bm:
             quote_text = _style_inline(bm.group(2))
-            out.append(f"  {_a(_FG_GREEN)}▐{_a(_RST)} {_a(_ITALIC)}{quote_text}{_a(_RST)}")
+            out.append(
+                f"  {_a(_FG_GREEN)}▐{_a(_RST)} {_a(_ITALIC)}{quote_text}{_a(_RST)}"
+            )
             i += 1
             continue
 
@@ -218,7 +233,7 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
     if _tty() and base_style:
         # Prepend base style and re-apply it after every reset
         result = base_style + result.replace(_RST, _RST + base_style) + _RST
-        
+
     if stream is not None:
         stream.write(result + "\r\n")
         stream.flush()
@@ -260,21 +275,35 @@ def _render_table(lines: list[str]) -> list[str]:
             pad = col_widths[j] - plain_len
             cells_out.append(styled + " " * max(pad, 0))
 
-        line_str = f"  {_a(_DIM)}│{_a(_RST)} " + f" {_a(_DIM)}│{_a(_RST)} ".join(cells_out) + f" {_a(_DIM)}│{_a(_RST)}"
+        line_str = (
+            f"  {_a(_DIM)}│{_a(_RST)} "
+            + f" {_a(_DIM)}│{_a(_RST)} ".join(cells_out)
+            + f" {_a(_DIM)}│{_a(_RST)}"
+        )
 
         if ri == 0:
             # Top border
-            border = f"  {_a(_DIM)}┌─" + "─┬─".join("─" * w for w in col_widths) + f"─┐{_a(_RST)}"
+            border = (
+                f"  {_a(_DIM)}┌─"
+                + "─┬─".join("─" * w for w in col_widths)
+                + f"─┐{_a(_RST)}"
+            )
             out.append(border)
             out.append(line_str)
             # Header separator
-            sep = f"  {_a(_DIM)}├─" + "─┼─".join("─" * w for w in col_widths) + f"─┤{_a(_RST)}"
+            sep = (
+                f"  {_a(_DIM)}├─"
+                + "─┼─".join("─" * w for w in col_widths)
+                + f"─┤{_a(_RST)}"
+            )
             out.append(sep)
         else:
             out.append(line_str)
 
     # Bottom border
-    border = f"  {_a(_DIM)}└─" + "─┴─".join("─" * w for w in col_widths) + f"─┘{_a(_RST)}"
+    border = (
+        f"  {_a(_DIM)}└─" + "─┴─".join("─" * w for w in col_widths) + f"─┘{_a(_RST)}"
+    )
     out.append(border)
     return out
 

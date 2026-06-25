@@ -57,7 +57,11 @@ class WoolAgent:
         self.messages: list[ChatMessage] = []
         self.active_provider: Provider | None = None
         self.active_model: str | None = config.active_model
-        self.total_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        self.total_usage: dict[str, int] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
         self._active_bg_tasks: list[asyncio.Task[Any]] = []
 
         self._setup_tools()
@@ -81,7 +85,9 @@ class WoolAgent:
     def _setup_providers(self) -> None:
         for name, pc in self.config.providers.items():
             provider = OpenAICompatProvider(
-                name=pc.name, base_url=pc.base_url, api_key=pc.api_key,
+                name=pc.name,
+                base_url=pc.base_url,
+                api_key=pc.api_key,
             )
             self.provider_registry.register(provider)
 
@@ -89,11 +95,11 @@ class WoolAgent:
             self.active_provider = self.provider_registry.get(
                 self.config.active_provider,
             )
-            
+
         if not self.active_provider and self.config.providers:
             first_name = next(iter(self.config.providers))
             self.active_provider = self.provider_registry.get(first_name)
-            
+
         if self.active_provider:
             prov_cfg = self.config.providers.get(self.active_provider.name)
             if prov_cfg and prov_cfg.default_model:
@@ -119,9 +125,15 @@ class WoolAgent:
         self.save_session()
 
         if not self.active_provider:
-            yield "text", (
-                "\n" + red("No provider configured.") + "\n"
-                + dim("  Use: /provider add <name> <base_url> <api_key>") + "\n"
+            yield (
+                "text",
+                (
+                    "\n"
+                    + red("No provider configured.")
+                    + "\n"
+                    + dim("  Use: /provider add <name> <base_url> <api_key>")
+                    + "\n"
+                ),
             )
             return
 
@@ -167,14 +179,18 @@ class WoolAgent:
             # Record the assistant turn.
             final_content = accumulated_text
             if accumulated_reasoning:
-                final_content = f"<think>\n{accumulated_reasoning}\n</think>\n{final_content}"
-                
-            self.messages.append(ChatMessage(
-                role="assistant",
-                content=final_content or None,
-                tool_calls=pending_tool_calls or None,
-                usage=last_usage,
-            ))
+                final_content = (
+                    f"<think>\n{accumulated_reasoning}\n</think>\n{final_content}"
+                )
+
+            self.messages.append(
+                ChatMessage(
+                    role="assistant",
+                    content=final_content or None,
+                    tool_calls=pending_tool_calls or None,
+                    usage=last_usage,
+                )
+            )
             self.save_session()
 
             # If there are no tool calls, check for background tasks.
@@ -182,35 +198,55 @@ class WoolAgent:
                 if hasattr(self, "_active_bg_tasks") and self._active_bg_tasks:
                     bg_tasks = self._active_bg_tasks
                     self._active_bg_tasks = []
-                    
+
                     import asyncio
-                    yield "tool", f"\r\n  {dim('┌─')} {cyan('System')} {dim('──────────────────────────────────────────')}\r\n"
-                    yield "tool", f"  {dim('│')} {dim('Waiting for background subagents to finish...')}\r\n"
-                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+
+                    yield (
+                        "tool",
+                        f"\r\n  {dim('┌─')} {cyan('System')} {dim('──────────────────────────────────────────')}\r\n",
+                    )
+                    yield (
+                        "tool",
+                        f"  {dim('│')} {dim('Waiting for background subagents to finish...')}\r\n",
+                    )
+                    yield (
+                        "tool",
+                        f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
+                    )
 
                     results = await asyncio.gather(*bg_tasks, return_exceptions=True)
-                    
+
                     combined_result = []
                     for i, res in enumerate(results):
                         if isinstance(res, BaseException):
-                            combined_result.append(f"Subagent {i+1} failed: {res}")
+                            combined_result.append(f"Subagent {i + 1} failed: {res}")
                         else:
                             bg_tc, bg_res = res
-                            combined_result.append(f"Subagent {bg_tc.id} Result:\n{bg_res}")
-                    
+                            combined_result.append(
+                                f"Subagent {bg_tc.id} Result:\n{bg_res}"
+                            )
+
                     final_text = "\n\n".join(combined_result)
-                    
+
                     output_lines = final_text.splitlines()
                     num_lines = len(output_lines)
-                    yield "tool", f"  {dim('┌─')} {cyan('System')} {bold(f'Background Results ({num_lines} lines):')} {dim('─────────────')}\r\n"
+                    yield (
+                        "tool",
+                        f"  {dim('┌─')} {cyan('System')} {bold(f'Background Results ({num_lines} lines):')} {dim('─────────────')}\r\n",
+                    )
                     for line in output_lines:
                         yield "tool", f"  {dim('│')} {dim(line)}\r\n"
-                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+                    yield (
+                        "tool",
+                        f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
+                    )
 
-                    self.messages.append(ChatMessage(
-                        role="user",
-                        content=f"The background subagents have finished. Here are their final results:\n\n{final_text}\n\nPlease provide a final summary of these results to the user."
-                    ))
+                    self.messages.append(
+                        ChatMessage(
+                            role="user",
+                            content=f"The background subagents have finished. Here are their final results:\n\n{final_text}\n\nPlease provide a final summary of these results to the user.",
+                        )
+                    )
                     self.save_session()
                     continue
                 else:
@@ -220,8 +256,10 @@ class WoolAgent:
 
             # Expand use_subagent with multiple tasks to bypass proxy limitations
             expanded_tool_calls = []
-            expansion_map: dict[str, list[str]] = {}  # original_id -> list of expanded_ids
-            
+            expansion_map: dict[
+                str, list[str]
+            ] = {}  # original_id -> list of expanded_ids
+
             for tc in pending_tool_calls:
                 if tc.name == "use_subagent":
                     try:
@@ -235,25 +273,29 @@ class WoolAgent:
                                 new_args["task"] = t
                                 expanded_id = f"{tc.id}_{i}"
                                 expanded_ids.append(expanded_id)
-                                expanded_tool_calls.append(ToolCall(
-                                    id=expanded_id,
-                                    name="use_subagent",
-                                    arguments=json.dumps(new_args)
-                                ))
+                                expanded_tool_calls.append(
+                                    ToolCall(
+                                        id=expanded_id,
+                                        name="use_subagent",
+                                        arguments=json.dumps(new_args),
+                                    )
+                                )
                             expansion_map[tc.id] = expanded_ids
                             continue
                     except Exception:
                         pass
                 expanded_tool_calls.append(tc)
-            
+
             pending_tool_calls = expanded_tool_calls
 
             # Execute each tool call concurrently and feed results back as they finish.
             import asyncio
-            
+
             async def execute_tool(tc):
                 try:
-                    args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
+                    args: dict[str, Any] = (
+                        json.loads(tc.arguments) if tc.arguments else {}
+                    )
                 except json.JSONDecodeError:
                     args = {}
 
@@ -261,17 +303,25 @@ class WoolAgent:
                 if tool:
                     try:
                         result = await tool.execute(**args)
-                        result_text = result.output if result.success else f"Error: {result.error or result.output}"
+                        result_text = (
+                            result.output
+                            if result.success
+                            else f"Error: {result.error or result.output}"
+                        )
                     except Exception as exc:
                         result_text = f"Tool execution error: {exc}"
                 else:
                     # Fall through to MCP.
                     try:
                         mcp_result = await self.mcp_manager.call_tool(tc.name, args)
-                        result_text = json.dumps(mcp_result) if isinstance(mcp_result, dict) else str(mcp_result)
+                        result_text = (
+                            json.dumps(mcp_result)
+                            if isinstance(mcp_result, dict)
+                            else str(mcp_result)
+                        )
                     except Exception as exc:
                         result_text = f"Tool not found: {exc}"
-                        
+
                 return tc, args, result_text
 
             tasks = {}
@@ -289,7 +339,12 @@ class WoolAgent:
 
                     # Return immediate success to the LLM so it can continue streaming the current turn!
                     async def instant_success(tc):
-                        return tc, {}, "Subagent successfully spawned and is running in the background. You may continue your work."
+                        return (
+                            tc,
+                            {},
+                            "Subagent successfully spawned and is running in the background. You may continue your work.",
+                        )
+
                     tasks[tc.id] = asyncio.create_task(instant_success(tc))
                 else:
                     tasks[tc.id] = asyncio.create_task(execute_tool(tc))
@@ -297,10 +352,15 @@ class WoolAgent:
             # 1. Print all tool headers and arguments IMMEDIATELY
             for tc in pending_tool_calls:
                 yield "tool_start", tc.name
-                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
+                yield (
+                    "tool",
+                    f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n",
+                )
 
                 try:
-                    tc_args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
+                    tc_args: dict[str, Any] = (
+                        json.loads(tc.arguments) if tc.arguments else {}
+                    )
                 except json.JSONDecodeError:
                     tc_args = {}
 
@@ -309,9 +369,12 @@ class WoolAgent:
                     yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
                     for line in args_fmt.splitlines():
                         yield "tool", f"  {dim('│')} {line}\r\n"
-                        
+
                 if tc.name == "use_subagent":
-                    yield "tool", f"  {dim('└─')} {dim('[Spawned background task]')}\r\n\r\n"
+                    yield (
+                        "tool",
+                        f"  {dim('└─')} {dim('[Spawned background task]')}\r\n\r\n",
+                    )
                 else:
                     yield "tool", f"  {dim('└─')} {dim('[Executing...]')}\r\n\r\n"
 
@@ -324,17 +387,23 @@ class WoolAgent:
                     # Cap result length to avoid excessive memory usage.
                     if len(result_text) > 30_000:
                         result_text = result_text[:30_000] + "\n… (truncated)"
-                    
+
                     completed_results[tc.id] = result_text
 
                     # Show immersive full output with ANSI borders for the result
                     output_lines = result_text.splitlines()
                     num_lines = len(output_lines)
-                    
-                    yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n"
+
+                    yield (
+                        "tool",
+                        f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n",
+                    )
                     for line in output_lines:
                         yield "tool", f"  {dim('│')} {dim(line)}\r\n"
-                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+                    yield (
+                        "tool",
+                        f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
+                    )
             finally:
                 for t in tasks.values():
                     if not t.done():
@@ -346,23 +415,29 @@ class WoolAgent:
                     expanded_ids = expansion_map[original_tc.id]
                     combined_result = []
                     for i, exp_id in enumerate(expanded_ids):
-                        combined_result.append(f"--- Subagent {i+1} Output ---\n{completed_results.get(exp_id, '')}")
+                        combined_result.append(
+                            f"--- Subagent {i + 1} Output ---\n{completed_results.get(exp_id, '')}"
+                        )
                     final_result_text = "\n\n".join(combined_result)
                 else:
                     final_result_text = completed_results.get(original_tc.id, "")
 
-                self.messages.append(ChatMessage(
-                    role="tool",
-                    content=final_result_text,
-                    tool_call_id=original_tc.id,
-                    name=original_tc.name,
-                ))
-            
+                self.messages.append(
+                    ChatMessage(
+                        role="tool",
+                        content=final_result_text,
+                        tool_call_id=original_tc.id,
+                        name=original_tc.name,
+                    )
+                )
+
             # Force Gemini to continue the task or summarize, preventing 0-token silent exits
-            self.messages.append(ChatMessage(
-                role="user",
-                content="Tool execution complete. Please continue with the rest of the task, or provide a final summary."
-            ))
+            self.messages.append(
+                ChatMessage(
+                    role="user",
+                    content="Tool execution complete. Please continue with the rest of the task, or provide a final summary.",
+                )
+            )
 
             self.save_session()
 
@@ -398,11 +473,13 @@ class WoolAgent:
         path = self.get_session_path()
         data = {
             "messages": [m.to_dict() for m in self.messages],
-            "total_usage": self.total_usage
+            "total_usage": self.total_usage,
         }
-        
+
         temp_path = path.with_suffix(".tmp")
-        temp_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temp_path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         temp_path.replace(path)
 
     def clear_history(self) -> None:
@@ -414,6 +491,7 @@ class WoolAgent:
         self.save_session()
         if hasattr(self, "_active_bg_tasks"):
             import asyncio
+
             for t in self._active_bg_tasks:
                 if not t.done():
                     t.cancel()

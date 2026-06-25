@@ -61,14 +61,18 @@ class MCPManager:
                 continue
             for tool in client.tools:
                 # MCP tools already have a similar structure; convert to OpenAI format.
-                schemas.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool.get("name", ""),
-                        "description": tool.get("description", ""),
-                        "parameters": tool.get("inputSchema", {"type": "object", "properties": {}}),
-                    },
-                })
+                schemas.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": tool.get("name", ""),
+                            "description": tool.get("description", ""),
+                            "parameters": tool.get(
+                                "inputSchema", {"type": "object", "properties": {}}
+                            ),
+                        },
+                    }
+                )
         return schemas
 
     async def call_tool(self, tool_name: str, arguments: dict) -> Any:

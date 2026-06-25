@@ -28,9 +28,11 @@ class WebSearch(Tool):
         return [
             ToolParameter(name="query", type="string", description="Search query."),
             ToolParameter(
-                name="num_results", type="integer",
+                name="num_results",
+                type="integer",
                 description="Number of results to return (default 5).",
-                required=False, default=5,
+                required=False,
+                default=5,
             ),
         ]
 
@@ -45,7 +47,8 @@ class WebSearch(Tool):
             results = await self._ddg_search(query, num)
         except Exception as exc:
             return ToolResult(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"Search failed: {exc}",
             )
 
@@ -80,7 +83,8 @@ class WebSearch(Tool):
         for block in re.finditer(
             r'class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>.*?'
             r'class="result__snippet"[^>]*>(.*?)</(?:td|div|span)>',
-            body, re.DOTALL,
+            body,
+            re.DOTALL,
         ):
             if len(results) >= num:
                 break
@@ -94,6 +98,7 @@ class WebSearch(Tool):
             m = re.search(r"uddg=([^&]+)", raw_url)
             actual_url = html.unescape(m.group(1)) if m else raw_url
             from urllib.parse import unquote
+
             actual_url = unquote(actual_url)
 
             results.append({"title": title, "url": actual_url, "snippet": snippet})

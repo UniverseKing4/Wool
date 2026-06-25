@@ -13,7 +13,9 @@ from wool.tools.base import Tool, ToolParameter, ToolResult
 MAX_RESPONSE_BYTES = 100_000
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\n{3,}")
-_SCRIPT_RE = re.compile(r"<(script|style|noscript)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE)
+_SCRIPT_RE = re.compile(
+    r"<(script|style|noscript)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE
+)
 
 
 class WebFetch(Tool):
@@ -32,15 +34,19 @@ class WebFetch(Tool):
         return [
             ToolParameter(name="url", type="string", description="URL to fetch."),
             ToolParameter(
-                name="extract_mode", type="string",
+                name="extract_mode",
+                type="string",
                 description="Content extraction mode.",
                 enum=["text", "html", "markdown"],
-                required=False, default="text",
+                required=False,
+                default="text",
             ),
             ToolParameter(
-                name="timeout", type="integer",
+                name="timeout",
+                type="integer",
                 description="Request timeout in seconds (default 15).",
-                required=False, default=15,
+                required=False,
+                default=15,
             ),
         ]
 
@@ -64,7 +70,8 @@ class WebFetch(Tool):
                 resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             return ToolResult(
-                success=False, output="",
+                success=False,
+                output="",
                 error=f"HTTP {exc.response.status_code}: {exc.response.text[:300]}",
             )
         except httpx.HTTPError as exc:
@@ -102,7 +109,11 @@ class WebFetch(Tool):
         text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
         text = text.replace("</p>", "\n\n").replace("</div>", "\n")
         text = text.replace("</li>", "\n").replace("<li>", "  • ")
-        text = text.replace("</h1>", "\n\n").replace("</h2>", "\n\n").replace("</h3>", "\n\n")
+        text = (
+            text.replace("</h1>", "\n\n")
+            .replace("</h2>", "\n\n")
+            .replace("</h3>", "\n\n")
+        )
         text = _TAG_RE.sub("", text)
         text = html.unescape(text)
         text = _WS_RE.sub("\n\n", text).strip()

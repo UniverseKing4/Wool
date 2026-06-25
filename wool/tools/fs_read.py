@@ -34,7 +34,9 @@ class FileSystemRead(Tool):
     @property
     def parameters(self) -> list[ToolParameter]:
         return [
-            ToolParameter(name="path", type="string", description="Absolute path to read."),
+            ToolParameter(
+                name="path", type="string", description="Absolute path to read."
+            ),
             ToolParameter(
                 name="mode",
                 type="string",
@@ -42,24 +44,29 @@ class FileSystemRead(Tool):
                 enum=["file", "directory", "search", "image"],
             ),
             ToolParameter(
-                name="start_line", type="integer",
+                name="start_line",
+                type="integer",
                 description="First line to read (1-indexed, file mode).",
                 required=False,
             ),
             ToolParameter(
-                name="end_line", type="integer",
+                name="end_line",
+                type="integer",
                 description="Last line to read (inclusive, file mode).",
                 required=False,
             ),
             ToolParameter(
-                name="pattern", type="string",
+                name="pattern",
+                type="string",
                 description="Grep pattern (search mode).",
                 required=False,
             ),
             ToolParameter(
-                name="recursive", type="boolean",
+                name="recursive",
+                type="boolean",
                 description="Recurse into subdirectories (default true).",
-                required=False, default=True,
+                required=False,
+                default=True,
             ),
         ]
 
@@ -94,7 +101,7 @@ class FileSystemRead(Tool):
         start = max(int(kw.get("start_line") or 1), 1)
         end = int(kw.get("end_line") or (start + MAX_FILE_LINES - 1))
         end = max(start, end)
-        
+
         selected: list[str] = []
         total_lines = 0
         truncated = False
@@ -111,11 +118,16 @@ class FileSystemRead(Tool):
         except Exception as exc:
             return ToolResult(success=False, output="", error=str(exc))
 
-        numbered = [f"{start + i:>6} │ {line.rstrip()}" for i, line in enumerate(selected)]
+        numbered = [
+            f"{start + i:>6} │ {line.rstrip()}" for i, line in enumerate(selected)
+        ]
         text = "\n".join(numbered)
         if truncated:
             text += f"\n... (truncated at {MAX_FILE_LINES} lines)"
-        meta = {"total_lines": total_lines, "shown": f"{start}-{start + len(selected) - 1}"}
+        meta = {
+            "total_lines": total_lines,
+            "shown": f"{start}-{start + len(selected) - 1}",
+        }
         return ToolResult(success=True, output=text, metadata=meta)
 
     # ── directory ─────────────────────────────────────────────────────────
@@ -128,10 +140,14 @@ class FileSystemRead(Tool):
 
         entries: list[str] = []
         try:
-            children = sorted(p.iterdir(), key=lambda c: (not c.is_dir(), c.name.lower()))
+            children = sorted(
+                p.iterdir(), key=lambda c: (not c.is_dir(), c.name.lower())
+            )
             for i, child in enumerate(children):
                 if i >= MAX_DIR_ENTRIES:
-                    entries.append(f"  ... ({len(list(p.iterdir())) - MAX_DIR_ENTRIES} more)")
+                    entries.append(
+                        f"  ... ({len(list(p.iterdir())) - MAX_DIR_ENTRIES} more)"
+                    )
                     break
                 prefix = "📁" if child.is_dir() else "📄"
                 size = ""
@@ -154,7 +170,9 @@ class FileSystemRead(Tool):
     async def _search(self, p: Path, kw: dict) -> ToolResult:
         pattern = kw.get("pattern", "")
         if not pattern:
-            return ToolResult(success=False, output="", error="Pattern is required for search.")
+            return ToolResult(
+                success=False, output="", error="Pattern is required for search."
+            )
         recursive = kw.get("recursive", True)
         flag = "-rn" if recursive else "-n"
         cmd = ["grep", flag, "--color=never", "-I", "--include=*", pattern, str(p)]
@@ -174,7 +192,9 @@ class FileSystemRead(Tool):
         except asyncio.TimeoutError:
             return ToolResult(success=False, output="", error="Search timed out.")
         except FileNotFoundError:
-            return ToolResult(success=False, output="", error="grep not found on system.")
+            return ToolResult(
+                success=False, output="", error="grep not found on system."
+            )
 
     # ── image ─────────────────────────────────────────────────────────────
 
@@ -183,7 +203,9 @@ class FileSystemRead(Tool):
             return ToolResult(success=False, output="", error=f"Not found: {p}")
         mime, _ = mimetypes.guess_type(str(p))
         if not mime or not mime.startswith("image/"):
-            return ToolResult(success=False, output="", error=f"Not an image: {p} ({mime})")
+            return ToolResult(
+                success=False, output="", error=f"Not an image: {p} ({mime})"
+            )
         st = p.stat()
         info = (
             f"Image: {p.name}\n"

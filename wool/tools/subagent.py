@@ -31,23 +31,27 @@ class SubagentDelegation(Tool):
     def parameters(self) -> list[ToolParameter]:
         return [
             ToolParameter(
-                name="tasks", type="array",
+                name="tasks",
+                type="array",
                 description="List of tasks to delegate concurrently. To spawn 3 subagents at once, provide an array of 3 distinct tasks.",
                 required=False,
                 items_type="string",
             ),
             ToolParameter(
-                name="task", type="string",
+                name="task",
+                type="string",
                 description="Legacy single task argument. Prefer 'tasks' for multiple concurrent subagents.",
                 required=False,
             ),
             ToolParameter(
-                name="context", type="string",
+                name="context",
+                type="string",
                 description="Additional context to pass to the subagent.",
                 required=False,
             ),
             ToolParameter(
-                name="tools", type="array",
+                name="tools",
+                type="array",
                 description="List of tool names the subagent is allowed to use.",
                 required=False,
                 items_type="string",
@@ -58,12 +62,14 @@ class SubagentDelegation(Tool):
         task: str = kwargs.get("task", "")
         context: str = kwargs.get("context", "")
         tools: list[str] = kwargs.get("tools", [])
-        
+
         # Note: 'tasks' array expansion is handled upstream in agent.py to preserve UI parallelism.
         # This execute method only handles single tasks.
 
         if not task:
-            return ToolResult(success=False, output="", error="Task description is required.")
+            return ToolResult(
+                success=False, output="", error="Task description is required."
+            )
 
         from wool.config import WoolConfig
         from wool.agent import WoolAgent
@@ -72,10 +78,10 @@ class SubagentDelegation(Tool):
         sub_config = WoolConfig.load()
         sub_config.active_session = f"subagent_{uuid.uuid4().hex[:8]}"
         sub_agent = WoolAgent(sub_config)
-        
+
         # Prevent infinite subagent recursion
         sub_agent.tool_registry._tools.pop("use_subagent", None)
-        
+
         # Restrict tools if specified, handling 'default_api:' prefixes
         if tools:
             clean_tools = [t.replace("default_api:", "") for t in tools]
@@ -86,22 +92,29 @@ class SubagentDelegation(Tool):
         prompt = f"TASK:\n{task}\n"
         if context:
             prompt += f"\nCONTEXT:\n{context}\n"
-            
+
         final_output = ""
         try:
             # Consume the generator to drive the subagent forward
             async for _event_type, _content in sub_agent.process_input(prompt):
                 pass
-                
+
             if sub_agent.messages and sub_agent.messages[-1].role == "assistant":
                 import re
+
                 final_output = sub_agent.messages[-1].content or ""
-                final_output = re.sub(r'<think>.*?</think>', '', final_output, flags=re.DOTALL).strip()
+                final_output = re.sub(
+                    r"<think>.*?</think>", "", final_output, flags=re.DOTALL
+                ).strip()
             else:
                 final_output = "The subagent completed its execution but did not produce a final response."
-                
+
         except Exception as exc:
-            return ToolResult(success=False, output=f"Subagent execution failed: {exc}", error=str(exc))
+            return ToolResult(
+                success=False,
+                output=f"Subagent execution failed: {exc}",
+                error=str(exc),
+            )
         finally:
             # Clean up the temporary session file
             path = sub_agent.get_session_path()

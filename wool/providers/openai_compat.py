@@ -89,7 +89,7 @@ class OpenAICompatProvider(Provider):
         # Accumulators for streamed tool-call deltas.
         tc_index_map: dict[int, dict] = {}  # index → {id, name, arguments}
         finish_emitted = False
-        
+
         tag_parser = ThinkTagParser()
 
         try:
@@ -108,7 +108,7 @@ class OpenAICompatProvider(Provider):
                         continue  # SSE comment or keep-alive
                     if not line.startswith("data:"):
                         continue
-                    payload = line[len("data:"):].strip()
+                    payload = line[len("data:") :].strip()
                     if payload == "[DONE]":
                         # Flush any accumulated tool calls.
                         for _idx in sorted(tc_index_map):
@@ -130,18 +130,22 @@ class OpenAICompatProvider(Provider):
                         chunk = json.loads(payload)
                     except json.JSONDecodeError:
                         continue
-                        
+
                     if "error" in chunk:
                         err_data = chunk["error"]
-                        err_msg = err_data.get("message", str(err_data)) if isinstance(err_data, dict) else str(err_data)
+                        err_msg = (
+                            err_data.get("message", str(err_data))
+                            if isinstance(err_data, dict)
+                            else str(err_data)
+                        )
                         yield StreamEvent(type="error", content=f"API Error: {err_msg}")
                         return
 
                     choices = chunk.get("choices", [])
-                    
+
                     if "usage" in chunk and chunk["usage"]:
                         yield StreamEvent(type="usage", usage=chunk["usage"])
-                        
+
                     if not choices:
                         continue
                     delta = choices[0].get("delta", {})
@@ -149,7 +153,9 @@ class OpenAICompatProvider(Provider):
 
                     # ── reasoning content ──
                     if delta.get("reasoning_content"):
-                        yield StreamEvent(type="reasoning", content=delta["reasoning_content"])
+                        yield StreamEvent(
+                            type="reasoning", content=delta["reasoning_content"]
+                        )
                     elif delta.get("reasoning"):
                         yield StreamEvent(type="reasoning", content=delta["reasoning"])
 

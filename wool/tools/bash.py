@@ -107,7 +107,9 @@ class ExecuteBash(Tool):
                 combined += ("\n--- stderr ---\n" + stderr) if stdout else stderr
 
             if len(combined) > MAX_OUTPUT:
-                combined = combined[:MAX_OUTPUT] + f"\n... (truncated at {MAX_OUTPUT} chars)"
+                combined = (
+                    combined[:MAX_OUTPUT] + f"\n... (truncated at {MAX_OUTPUT} chars)"
+                )
 
             exit_code = proc.returncode or 0
             return ToolResult(
@@ -120,6 +122,8 @@ class ExecuteBash(Tool):
         except FileNotFoundError:
             return ToolResult(success=False, output="", error="Shell not found.")
         except PermissionError as exc:
-            return ToolResult(success=False, output="", error=f"Permission denied: {exc}")
+            return ToolResult(
+                success=False, output="", error=f"Permission denied: {exc}"
+            )
         except OSError as exc:
             return ToolResult(success=False, output="", error=f"OS error: {exc}")

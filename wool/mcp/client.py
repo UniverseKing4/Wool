@@ -69,10 +69,11 @@ class MCPClient:
         await self._request(
             "initialize",
             {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "wool", "version": "0.1.0"},
-        })
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "wool", "version": "0.1.0"},
+            },
+        )
         # Send initialized notification (no response expected).
         await self._notify("notifications/initialized", {})
         self._connected = True
@@ -80,12 +81,12 @@ class MCPClient:
     async def disconnect(self) -> None:
         """Shut down the MCP server."""
         self._connected = False
-        
+
         for fut in self._pending.values():
             if not fut.done():
                 fut.set_exception(RuntimeError("MCP disconnected"))
         self._pending.clear()
-        
+
         if self._reader_task and not self._reader_task.done():
             self._reader_task.cancel()
             try:
@@ -124,10 +125,13 @@ class MCPClient:
         """Invoke a tool on the server."""
         if not self._connected:
             raise RuntimeError(f"MCP server '{self.name}' is not connected.")
-        result = await self._request("tools/call", {
-            "name": tool_name,
-            "arguments": arguments,
-        })
+        result = await self._request(
+            "tools/call",
+            {
+                "name": tool_name,
+                "arguments": arguments,
+            },
+        )
         return result
 
     @property
@@ -160,42 +164,28 @@ class MCPClient:
         await self._send(msg)
 
     async def _send(self, msg: dict) -> None:
-        """Write a JSON-RPC message with Content-Length framing."""
+        """Write a newline-delimited JSON-RPC message."""
         if not self._process or not self._process.stdin:
             raise RuntimeError("MCP process not running.")
-        body = json.dumps(msg).encode("utf-8")
-        header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
-        self._process.stdin.write(header + body)
+        body = json.dumps(msg).encode("utf-8") + b"\n"
+        self._process.stdin.write(body)
         await self._process.stdin.drain()
 
     async def _read_loop(self) -> None:
-        """Read JSON-RPC responses from stdout, resolving pending futures."""
+        """Read newline-delimited JSON-RPC responses from stdout, resolving pending futures."""
         assert self._process and self._process.stdout
         try:
-            non_header_lines = 0
             while True:
-                # Read headers until blank line.
-                content_length = 0
-                while True:
-                    line = await self._process.stdout.readline()
-                    if not line:
-                        return  # EOF
-                    line_s = line.decode("utf-8", errors="replace").strip()
-                    if not line_s:
-                        break  # end of headers
-                    if line_s.lower().startswith("content-length:"):
-                        content_length = int(line_s.split(":", 1)[1].strip())
-                        non_header_lines = 0
-                    else:
-                        non_header_lines += 1
-                        if non_header_lines > 100:
-                            return  # Safety break for malformed stdio
-                            
-                if content_length <= 0:
+                line = await self._process.stdout.readline()
+                if not line:
+                    return  # EOF
+
+                line_s = line.decode("utf-8", errors="replace").strip()
+                if not line_s:
                     continue
-                body = await self._process.stdout.readexactly(content_length)
+
                 try:
-                    msg = json.loads(body)
+                    msg = json.loads(line_s)
                 except json.JSONDecodeError:
                     continue
 
@@ -204,9 +194,7 @@ class MCPClient:
                 if rid is not None and rid in self._pending:
                     future = self._pending.pop(rid)
                     if "error" in msg:
-                        future.set_exception(
-                            RuntimeError(f"MCP error: {msg['error']}")
-                        )
+                        future.set_exception(RuntimeError(f"MCP error: {msg['error']}"))
                     else:
                         future.set_result(msg.get("result", {}))
         except asyncio.CancelledError:
