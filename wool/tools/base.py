@@ -17,6 +17,7 @@ class ToolParameter:
     required: bool = True
     enum: list[str] | None = None
     default: Any = None
+    items_type: str | None = None
 
 
 @dataclass
@@ -54,6 +55,8 @@ class Tool(ABC):
                 prop["enum"] = p.enum
             if p.default is not None:
                 prop["default"] = p.default
+            if p.type == "array" and p.items_type is not None:
+                prop["items"] = {"type": p.items_type}
             properties[p.name] = prop
             if p.required:
                 required.append(p.name)

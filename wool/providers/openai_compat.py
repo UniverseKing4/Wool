@@ -120,6 +120,12 @@ class OpenAICompatProvider(Provider):
                         chunk = json.loads(payload)
                     except json.JSONDecodeError:
                         continue
+                        
+                    if "error" in chunk:
+                        err_data = chunk["error"]
+                        err_msg = err_data.get("message", str(err_data)) if isinstance(err_data, dict) else str(err_data)
+                        yield StreamEvent(type="error", content=f"API Error: {err_msg}")
+                        return
 
                     choices = chunk.get("choices", [])
                     if not choices:

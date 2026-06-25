@@ -43,6 +43,7 @@ class SubagentDelegation(Tool):
                 name="tools", type="array",
                 description="List of tool names the subagent is allowed to use.",
                 required=False,
+                items_type="string",
             ),
         ]
 
