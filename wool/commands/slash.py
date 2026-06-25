@@ -42,6 +42,7 @@ class SlashCommandHandler:
             "/help": self._help,
             "/provider": self._provider,
             "/model": self._model,
+            "/models": self._models,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/clear": self._clear,
@@ -67,6 +68,7 @@ class SlashCommandHandler:
             ("/help", "Show this help message"),
             ("/provider list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
+            ("/models", "List available models for the active provider"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/clear", "Clear conversation history"),
@@ -144,6 +146,9 @@ class SlashCommandHandler:
         return False
 
     # ── /model ────────────────────────────────────────────────────────────
+
+    async def _models(self, args: str) -> bool:
+        return await self._model("list")
 
     async def _model(self, args: str) -> bool:
         parts = args.strip().split()
