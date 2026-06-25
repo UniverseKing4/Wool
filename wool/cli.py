@@ -12,6 +12,7 @@ import termios
 import tty
 import readline
 import signal
+import time
 
 from wool import __version__
 from wool.agent import WoolAgent
@@ -183,6 +184,7 @@ async def run_repl() -> None:
             has_reasoned = False
             transitioned = False
             last_chunk_type = None
+            start_time = time.time()
             iterator = agent.process_input(text).__aiter__()
             try:
                 while True:
@@ -261,9 +263,17 @@ async def run_repl() -> None:
             finally:
                 if has_reasoned and not transitioned:
                     reasoning_printer.finish()
-                    sys.stdout.write("\n\n")
+                    sys.stdout.write("\r\n\r\n")
                     sys.stdout.flush()
                 printer.finish()
+                
+                latency = time.time() - start_time
+                if tools_used > 0:
+                    tool_str = f"Executed {tools_used} tool{'s' if tools_used != 1 else ''}"
+                    sys.stdout.write(f"\r\n  {dim(f'({tool_str} • {latency:.1f}s)')}\r\n")
+                else:
+                    sys.stdout.write(f"\r\n  {dim(f'({latency:.1f}s)')}\r\n")
+                sys.stdout.flush()
 
         try:
             tty.setcbreak(fd)
