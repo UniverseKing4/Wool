@@ -223,6 +223,10 @@ async def run_repl() -> None:
                     try:
                         chunk_tuple = next_task.result()
                     except StopAsyncIteration:
+                        if is_thinking.is_set():
+                            is_thinking.clear()
+                            sys.stdout.write("\r" + " " * 30 + "\r")
+                            sys.stdout.flush()
                         break
                         
                     if is_thinking.is_set():

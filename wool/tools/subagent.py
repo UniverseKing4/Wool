@@ -68,10 +68,10 @@ class SubagentDelegation(Tool):
         from wool.config import WoolConfig
         from wool.agent import WoolAgent
         from wool.providers.base import ChatMessage
-        import time
+        import uuid
 
         sub_config = WoolConfig.load()
-        sub_config.active_session = f"subagent_{int(time.time())}"
+        sub_config.active_session = f"subagent_{uuid.uuid4().hex[:8]}"
         sub_agent = WoolAgent(sub_config)
         
         # Prevent infinite subagent recursion
