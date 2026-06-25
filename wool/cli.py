@@ -125,11 +125,19 @@ async def run_repl() -> None:
                 sys.stdout.flush()
 
         async def _consume() -> None:
+            nonlocal printer
             try:
-                async for chunk in agent.process_input(text):
+                async for chunk_type, chunk in agent.process_input(text):
                     if not first_chunk_received.is_set():
                         first_chunk_received.set()
-                    printer.print_chunk(chunk)
+                        
+                    if chunk_type == "text":
+                        printer.print_chunk(chunk)
+                    elif chunk_type == "tool":
+                        printer.finish()
+                        sys.stdout.write(chunk)
+                        sys.stdout.flush()
+                        
                     if cancel_event.is_set():
                         break
             except asyncio.CancelledError:

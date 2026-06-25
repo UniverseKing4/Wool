@@ -97,7 +97,7 @@ class WoolAgent:
 
     # ── main agentic loop ─────────────────────────────────────────────────
 
-    async def process_input(self, user_input: str) -> AsyncIterator[str]:
+    async def process_input(self, user_input: str) -> AsyncIterator[tuple[str, str]]:
         """Process *user_input* through the full agent loop.
 
         Yields text chunks as they stream from the LLM.  Handles tool
@@ -108,7 +108,7 @@ class WoolAgent:
         self.messages.append(ChatMessage(role="user", content=user_input))
 
         if not self.active_provider:
-            yield (
+            yield "text", (
                 "\n" + red("No provider configured.") + "\n"
                 + dim("  Use: /provider add <name> <base_url> <api_key>") + "\n"
             )
@@ -133,14 +133,14 @@ class WoolAgent:
                 ):
                     if event.type == "text":
                         accumulated_text += event.content
-                        yield event.content
+                        yield "text", event.content
                     elif event.type == "tool_call" and event.tool_call:
                         pending_tool_calls.append(event.tool_call)
                     elif event.type == "error":
-                        yield "\n" + red(f"Error: {event.content}") + "\n"
+                        yield "text", "\n" + red(f"Error: {event.content}") + "\n"
                         return
             except Exception as exc:
-                yield "\n" + red(f"Provider error: {exc}") + "\n"
+                yield "text", "\n" + red(f"Provider error: {exc}") + "\n"
                 return
 
             # Record the assistant turn.
@@ -156,12 +156,19 @@ class WoolAgent:
 
             # Execute each tool call and feed results back.
             for tc in pending_tool_calls:
-                yield "\n" + dim(f"  ⚡ {bold(tc.name)}") + " "
+                yield "tool", f"\n  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\n"
 
                 try:
                     args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
                 except json.JSONDecodeError:
                     args = {}
+
+                if args:
+                    args_fmt = json.dumps(args, indent=2)
+                    yield "tool", f"  {dim('│')} {bold('Arguments:')}\n"
+                    for line in args_fmt.splitlines():
+                        yield "tool", f"  {dim('│')} {line}\n"
+                    yield "tool", f"  {dim('│')}\n"
 
                 # Try built-in tools first.
                 tool = self.tool_registry.get(tc.name)
@@ -179,17 +186,18 @@ class WoolAgent:
                     except Exception as exc:
                         result_text = f"Tool not found: {exc}"
 
-                # Cap result length.
+                # Cap result length to avoid excessive memory usage.
                 if len(result_text) > 30_000:
                     result_text = result_text[:30_000] + "\n… (truncated)"
 
-                # Show immersive full output instead of a preview.
-                args_str = json.dumps(args, indent=2) if args else "{}"
-                num_lines = len(result_text.splitlines())
+                # Show immersive full output with ANSI borders.
+                output_lines = result_text.splitlines()
+                num_lines = len(output_lines)
                 
-                yield f"\n\n### ⚡ Tool Execution: `{tc.name}`\n\n"
-                yield f"**Arguments:**\n```json\n{args_str}\n```\n\n"
-                yield f"**Result ({num_lines} lines):**\n```text\n{result_text}\n```\n\n"
+                yield "tool", f"  {dim('│')} {bold(f'Result ({num_lines} lines):')}\n"
+                for line in output_lines:
+                    yield "tool", f"  {dim('│')} {dim(line)}\n"
+                yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\n\n"
 
                 self.messages.append(ChatMessage(
                     role="tool",
@@ -201,7 +209,7 @@ class WoolAgent:
             # Loop continues — LLM will process the tool results.
 
         # Safety limit reached.
-        yield "\n" + yellow("⚠ Reached maximum tool iterations.") + "\n"
+        yield "text", "\n" + yellow("⚠ Reached maximum tool iterations.") + "\n"
 
     # ── session management ────────────────────────────────────────────────
 
