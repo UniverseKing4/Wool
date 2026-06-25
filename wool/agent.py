@@ -308,7 +308,7 @@ class WoolAgent:
                 if tc.name == "use_subagent":
                     yield "tool", f"  {dim('└─')} {dim('[Spawned background task]')}\r\n\r\n"
                 else:
-                    yield "tool", f"  {dim('└─')} {dim('[Running background task...]')}\r\n\r\n"
+                    yield "tool", f"  {dim('└─')} {dim('[Executing...]')}\r\n\r\n"
 
             # 2. Wait for them as they complete and print results in separate boxes!
             completed_results: dict[str, str] = {}
