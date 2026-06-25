@@ -6,20 +6,23 @@ import tty
 from typing import Callable
 from wool.utils.ansi import bold, cyan, dim, green, red, white
 
-def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str] | None:
+def run_session_menu(sessions: list[str], active_session: str, initial_idx: int = -1) -> tuple[str, str, int] | None:
     """
     Renders an interactive menu for sessions.
-    Returns (action, session_name) where action is "switch" or "delete",
+    Returns (action, session_name, last_idx) where action is "switch" or "delete",
     or None if cancelled.
     """
     if not sessions:
         return None
 
-    # Determine initial selected index (default to active session)
-    try:
-        selected_idx = sessions.index(active_session)
-    except ValueError:
-        selected_idx = 0
+    # Determine initial selected index
+    if 0 <= initial_idx < len(sessions):
+        selected_idx = initial_idx
+    else:
+        try:
+            selected_idx = sessions.index(active_session)
+        except ValueError:
+            selected_idx = 0
 
     delete_confirm_idx = -1
 
@@ -91,12 +94,12 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
                 
             elif ch == '\r' or ch == '\n':  # Enter
                 sys.stdout.write(f"\r\033[K\r\n")
-                return "switch", sessions[selected_idx]
+                return "switch", sessions[selected_idx], selected_idx
                 
             elif ch.lower() == 'd':
                 if delete_confirm_idx == selected_idx:
                     sys.stdout.write(f"\r\033[K\r\n")
-                    return "delete", sessions[selected_idx]
+                    return "delete", sessions[selected_idx], selected_idx
                 else:
                     delete_confirm_idx = selected_idx
             

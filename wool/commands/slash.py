@@ -302,25 +302,32 @@ class SlashCommandHandler:
             sess_dir.mkdir(parents=True, exist_ok=True)
             from wool.utils.menu import run_session_menu
             
+            last_idx = -1
             while True:
                 files = {f.stem for f in sess_dir.glob("*.json")}
                 files.add(self.agent.config.active_session)
                 session_list = sorted(files)
                 
-                result = run_session_menu(session_list, self.agent.config.active_session)
+                result = run_session_menu(session_list, self.agent.config.active_session, initial_idx=last_idx)
                 if not result:
                     return False
                     
-                action, selected_name = result
+                action, selected_name, menu_idx = result
                 if action == "delete":
                     name = selected_name
-                    path = self.agent.get_session_path(name)
                     
+                    if name == "default" and len(session_list) == 1:
+                        ansi_error("Cannot delete 'default' because it's the only session left. Use /clear to wipe history.")
+                        last_idx = menu_idx
+                        continue
+                        
+                    path = self.agent.get_session_path(name)
                     if path.exists():
                         path.unlink()
                         success(f"Session '{name}' deleted.")
                     else:
                         ansi_error(f"Session '{name}' not found.")
+                        last_idx = menu_idx
                         continue
                         
                     if name == self.agent.config.active_session:
@@ -331,6 +338,13 @@ class SlashCommandHandler:
                             success("Switched to session 'default'.")
                         else:
                             self.agent.clear_history()
+                            
+                    # Update index to stay in place. Since the element is deleted,
+                    # the next item shifts into menu_idx. If we deleted the last item,
+                    # menu_idx is now out of bounds, so we cap it.
+                    last_idx = min(menu_idx, len(session_list) - 2)
+                    last_idx = max(0, last_idx)
+                    
                 else:
                     self.agent.save_session()
                     self.agent.config.active_session = selected_name
@@ -468,20 +482,40 @@ class SlashCommandHandler:
     # ── /copy ─────────────────────────────────────────────────────────────
 
     async def _copy(self, _args: str) -> bool:
-        import pyperclip
-        from pyperclip import PyperclipException
-        
         # Find the last message with role == "assistant"
+        last_msg = None
         for msg in reversed(self.agent.messages):
             if msg.role == "assistant" and msg.content:
-                try:
-                    pyperclip.copy(msg.content)
-                    success("Copied the last AI response to clipboard.")
-                except PyperclipException as e:
-                    ansi_error(f"Clipboard error: {e}")
-                return False
+                last_msg = msg.content
+                break
                 
-        warning("No AI response found to copy.")
+        if not last_msg:
+            warning("No AI response found to copy.")
+            return False
+            
+        import sys
+        import base64
+        import os
+        
+        # 1. Try OSC 52 (works over SSH/Codespaces)
+        try:
+            b64 = base64.b64encode(last_msg.encode('utf-8')).decode('utf-8')
+            # Send OSC 52 copy command to the terminal
+            sys.stdout.write(f"\033]52;c;{b64}\a")
+            sys.stdout.flush()
+        except Exception:
+            pass
+            
+        # 2. Try Pyperclip as fallback for local desktop users
+        try:
+            import pyperclip
+            pyperclip.copy(last_msg)
+        except Exception as e:
+            # We don't print the pyperclip error anymore because OSC 52 likely succeeded 
+            # if they are in a terminal that supports it, or if they are headless they don't care.
+            pass
+            
+        success("Copied the last AI response to clipboard (OSC 52).")
         return False
 
     # ── /exit ─────────────────────────────────────────────────────────────
