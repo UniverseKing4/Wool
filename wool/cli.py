@@ -11,6 +11,7 @@ import sys
 import termios
 import tty
 import readline
+import signal
 
 from wool import __version__
 from wool.agent import WoolAgent
@@ -85,11 +86,17 @@ async def run_repl() -> None:
 
     while True:
         # ── read ──
+        old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
         try:
             user_input = input(_prompt(turn))
+        except KeyboardInterrupt:
+            print()
+            continue
         except EOFError:
             print()
             break
+        finally:
+            signal.signal(signal.SIGINT, old_handler)
 
         text = user_input.strip()
         if not text:
