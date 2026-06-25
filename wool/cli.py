@@ -212,6 +212,9 @@ async def run_repl() -> None:
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
                         
+                        has_reasoned = False
+                        transitioned = False
+                        
                     last_chunk_type = chunk_type
             except asyncio.CancelledError:
                 pass
@@ -242,7 +245,8 @@ async def run_repl() -> None:
                     await task
                 printer.finish()
                 if tools_used > 0:
-                    print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
+                    word = "tool" if tools_used == 1 else "tools"
+                    print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
                 print(f"\n{dim('  (cancelled via Escape)')}")
                 continue
             else:
