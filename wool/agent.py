@@ -291,7 +291,14 @@ class WoolAgent:
                     tool_call_id=original_tc.id,
                     name=original_tc.name,
                 ))
-                self.save_session()
+            
+            # Force Gemini to continue the task or summarize, preventing 0-token silent exits
+            self.messages.append(ChatMessage(
+                role="user",
+                content="Tool execution complete. Please continue with the rest of the task, or provide a final summary."
+            ))
+
+            self.save_session()
 
             # Loop continues — LLM will process the tool results.
 
