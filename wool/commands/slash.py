@@ -73,7 +73,7 @@ class SlashCommandHandler:
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
             ("/session [list|switch|new|rename|delete]", "Manage conversation sessions"),
-            ("/new <name>", "Create and switch to a new session (alias for /session new)"),
+            ("/new [name]", "Create and switch to a new session (alias for /session new)"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -306,9 +306,14 @@ class SlashCommandHandler:
 
         elif sub in ("switch", "new"):
             if len(parts) < 2:
-                ansi_error(f"Usage: /session {sub} <name>")
-                return False
-            name = parts[1]
+                if sub == "new":
+                    import time
+                    name = f"session_{int(time.time())}"
+                else:
+                    ansi_error(f"Usage: /session {sub} <name>")
+                    return False
+            else:
+                name = parts[1]
             if name == self.agent.config.active_session:
                 info(f"Already in session '{name}'.")
                 return False
