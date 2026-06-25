@@ -175,24 +175,15 @@ class WoolAgent:
             if not pending_tool_calls:
                 return
 
-            # Execute each tool call and feed results back.
-            for tc in pending_tool_calls:
-                yield "tool_start", tc.name
-                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
-
+            # Execute each tool call concurrently and feed results back as they finish.
+            import asyncio
+            
+            async def execute_tool(tc):
                 try:
                     args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
                 except json.JSONDecodeError:
                     args = {}
 
-                if args:
-                    args_fmt = json.dumps(args, indent=2)
-                    yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
-                    for line in args_fmt.splitlines():
-                        yield "tool", f"  {dim('│')} {line}\r\n"
-                    yield "tool", f"  {dim('│')}\r\n"
-
-                # Try built-in tools first.
                 tool = self.tool_registry.get(tc.name)
                 if tool:
                     try:
@@ -207,6 +198,23 @@ class WoolAgent:
                         result_text = json.dumps(mcp_result) if isinstance(mcp_result, dict) else str(mcp_result)
                     except Exception as exc:
                         result_text = f"Tool not found: {exc}"
+                        
+                return tc, args, result_text
+
+            tasks = [asyncio.create_task(execute_tool(tc)) for tc in pending_tool_calls]
+
+            for completed_task in asyncio.as_completed(tasks):
+                tc, args, result_text = await completed_task
+                
+                yield "tool_start", tc.name
+                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
+
+                if args:
+                    args_fmt = json.dumps(args, indent=2)
+                    yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
+                    for line in args_fmt.splitlines():
+                        yield "tool", f"  {dim('│')} {line}\r\n"
+                    yield "tool", f"  {dim('│')}\r\n"
 
                 # Cap result length to avoid excessive memory usage.
                 if len(result_text) > 30_000:
