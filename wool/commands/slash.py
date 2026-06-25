@@ -312,7 +312,7 @@ class SlashCommandHandler:
         system = [m for m in msgs if m.role == "system"]
         recent = [m for m in msgs if m.role != "system"][-4:]
         self.agent.messages = system + recent
-        success(f"Compacted to {len(self.agent.messages)} messages.")
+        success(f"Compacted to {len([m for m in self.agent.messages if m.role != 'system'])} messages.")
         return False
 
     # ── /status ───────────────────────────────────────────────────────────
@@ -323,7 +323,7 @@ class SlashCommandHandler:
         model = a.active_model or "auto"
         tools_n = len(a.tool_registry.list_tools())
         mcp_n = len(a.mcp_manager.list_servers())
-        msgs = len(a.messages)
+        msgs = sum(1 for m in a.messages if m.role != "system")
 
         print()
         print(f"  {bold(cyan('Wool Status'))}")
