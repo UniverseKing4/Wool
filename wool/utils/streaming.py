@@ -20,13 +20,14 @@ class StreamPrinter:
     delivering polished final output.
     """
 
-    def __init__(self, *, render_md: bool = True) -> None:
+    def __init__(self, *, render_md: bool = True, base_style: str = "") -> None:
         import os
         self._buffer: list[str] = []
         self._line_count: int = 0
         self._col: int = 0
         self._started: bool = False
         self._render_md = render_md
+        self._base_style = base_style
         
         # Get terminal width for accurate line wrapping calc
         try:
@@ -59,7 +60,11 @@ class StreamPrinter:
                     self._line_count += 1
                     self._col = 0
                     
-        sys.stdout.write(chunk)
+        out_chunk = chunk
+        if self._base_style and sys.stdout.isatty():
+            out_chunk = self._base_style + chunk + "\033[0m"
+            
+        sys.stdout.write(out_chunk)
         sys.stdout.flush()
         self._started = True
 
@@ -85,7 +90,7 @@ class StreamPrinter:
                 sys.stdout.write("\033[0J")  # clear from cursor to end
 
                 # Render markdown and print.
-                rendered = render_markdown(full.strip())
+                rendered = render_markdown(full.strip(), base_style=self._base_style)
                 sys.stdout.write(rendered + "\n")
                 sys.stdout.flush()
             else:

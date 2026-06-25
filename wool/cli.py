@@ -179,6 +179,7 @@ async def run_repl() -> None:
 
         async def _consume() -> None:
             nonlocal printer, tools_used
+            reasoning_printer = StreamPrinter(base_style="\033[2m\033[90m")
             has_reasoned = False
             transitioned = False
             last_chunk_type = None
@@ -231,18 +232,19 @@ async def run_repl() -> None:
 
                     if chunk_type == "text":
                         if has_reasoned and not transitioned:
+                            reasoning_printer.finish()
                             sys.stdout.write("\n\n")
                             sys.stdout.flush()
                             transitioned = True
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
                         has_reasoned = True
-                        sys.stdout.write(dim(gray(chunk)))
-                        sys.stdout.flush()
+                        reasoning_printer.print_chunk(chunk)
                     elif chunk_type == "tool_start":
                         tools_used += 1
                     elif chunk_type == "tool":
                         if has_reasoned and not transitioned:
+                            reasoning_printer.finish()
                             sys.stdout.write("\n\n")
                             sys.stdout.flush()
                             transitioned = True
@@ -256,6 +258,9 @@ async def run_repl() -> None:
                     last_chunk_type = chunk_type
             except asyncio.CancelledError:
                 pass
+            finally:
+                if has_reasoned and not transitioned:
+                    reasoning_printer.finish()
 
         try:
             tty.setcbreak(fd)

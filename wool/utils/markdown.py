@@ -108,7 +108,7 @@ _HEADING_COLORS = [
 _LIST_BULLETS = ["●", "○", "◦", "·"]
 
 
-def render_markdown(text: str, *, stream: TextIO | None = None) -> str:
+def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str = "") -> str:
     """Render *text* (markdown) to ANSI-styled terminal output.
 
     If *stream* is given the rendered output is also written there.
@@ -214,6 +214,10 @@ def render_markdown(text: str, *, stream: TextIO | None = None) -> str:
         i += 1
 
     result = "\n".join(out)
+    if _tty() and base_style:
+        # Prepend base style and re-apply it after every reset
+        result = base_style + result.replace(_RST, _RST + base_style) + _RST
+        
     if stream is not None:
         stream.write(result)
         stream.flush()

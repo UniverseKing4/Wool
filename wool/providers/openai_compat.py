@@ -17,6 +17,7 @@ from wool.providers.base import (
     StreamEvent,
     ToolCall,
 )
+from wool.utils.tag_parser import ThinkTagParser
 
 
 class OpenAICompatProvider(Provider):
@@ -83,6 +84,8 @@ class OpenAICompatProvider(Provider):
 
         # Accumulators for streamed tool-call deltas.
         tc_index_map: dict[int, dict] = {}  # index → {id, name, arguments}
+        
+        tag_parser = ThinkTagParser()
 
         try:
             async with self._client.stream("POST", url, json=body) as resp:
@@ -113,6 +116,8 @@ class OpenAICompatProvider(Provider):
                                     arguments=tc.get("arguments", ""),
                                 ),
                             )
+                        for t_type, t_chunk in tag_parser.flush():
+                            yield StreamEvent(type=t_type, content=t_chunk)
                         yield StreamEvent(type="done")
                         return
 
@@ -141,7 +146,8 @@ class OpenAICompatProvider(Provider):
 
                     # ── text content ──
                     if delta.get("content"):
-                        yield StreamEvent(type="text", content=delta["content"])
+                        for t_type, t_chunk in tag_parser.process(delta["content"]):
+                            yield StreamEvent(type=t_type, content=t_chunk)
 
                     # ── tool-call deltas ──
                     for tc_delta in delta.get("tool_calls", []):
@@ -170,6 +176,8 @@ class OpenAICompatProvider(Provider):
                                     arguments=tc.get("arguments", ""),
                                 ),
                             )
+                        for t_type, t_chunk in tag_parser.flush():
+                            yield StreamEvent(type=t_type, content=t_chunk)
                         tc_index_map.clear()
                         yield StreamEvent(type="done", finish_reason=finish)
                         return
@@ -184,6 +192,8 @@ class OpenAICompatProvider(Provider):
                                     arguments=tc.get("arguments", ""),
                                 ),
                             )
+                        for t_type, t_chunk in tag_parser.flush():
+                            yield StreamEvent(type=t_type, content=t_chunk)
                         tc_index_map.clear()
                         yield StreamEvent(type="done", finish_reason="tool_calls")
                         return
