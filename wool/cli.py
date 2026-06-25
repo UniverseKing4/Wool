@@ -6,7 +6,10 @@ with ANSI colours.
 
 from __future__ import annotations
 
+import asyncio
 import sys
+import termios
+import tty
 
 from wool import __version__
 from wool.agent import WoolAgent
@@ -90,13 +93,59 @@ async def run_repl() -> None:
         # ── eval / print ──
         print()
         printer = StreamPrinter()
+        
+        loop = asyncio.get_running_loop()
+        cancel_event = asyncio.Event()
+        
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        
+        def on_input() -> None:
+            ch = sys.stdin.read(1)
+            if ch == '\x1b' or ch == '\x03':  # Escape or Ctrl+C
+                cancel_event.set()
+
+        async def _consume() -> None:
+            try:
+                async for chunk in agent.process_input(text):
+                    printer.print_chunk(chunk)
+                    if cancel_event.is_set():
+                        break
+            except asyncio.CancelledError:
+                pass
+
         try:
-            async for chunk in agent.process_input(text):
-                printer.print_chunk(chunk)
+            tty.setcbreak(fd)
+            loop.add_reader(fd, on_input)
+            
+            task = asyncio.create_task(_consume())
+            cancel_task = asyncio.create_task(cancel_event.wait())
+            
+            await asyncio.wait(
+                [task, cancel_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            if cancel_event.is_set():
+                if not task.done():
+                    task.cancel()
+                    await task
+                printer.finish()
+                print(f"\n{dim('  (cancelled via Escape)')}")
+                continue
+            else:
+                await task  # raise any exceptions
+                
         except KeyboardInterrupt:
+            if not task.done():
+                task.cancel()
+                await task
             printer.finish()
             print(f"\n{dim('  (interrupted)')}")
             continue
+        finally:
+            loop.remove_reader(fd)
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
         printer.finish()
         print()  # spacer after response

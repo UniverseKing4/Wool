@@ -183,9 +183,13 @@ class WoolAgent:
                 if len(result_text) > 30_000:
                     result_text = result_text[:30_000] + "\n… (truncated)"
 
-                # Show brief preview.
-                preview = result_text[:120].replace("\n", " ")
-                yield dim(f"← {preview}{'…' if len(result_text) > 120 else ''}") + "\n"
+                # Show immersive full output instead of a preview.
+                args_str = json.dumps(args, indent=2) if args else "{}"
+                num_lines = len(result_text.splitlines())
+                
+                yield f"\n\n### ⚡ Tool Execution: `{tc.name}`\n\n"
+                yield f"**Arguments:**\n```json\n{args_str}\n```\n\n"
+                yield f"**Result ({num_lines} lines):**\n```text\n{result_text}\n```\n\n"
 
                 self.messages.append(ChatMessage(
                     role="tool",
