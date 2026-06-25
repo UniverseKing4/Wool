@@ -35,18 +35,29 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
     # Print the header once
     print(f"\n  {bold(cyan('Sessions:'))}")
     
-    num_lines = len(sessions) + 2  # list + 1 blank line + 1 prompt line
+    # We will print the list, then we will keep moving cursor up and reprinting.
+    num_lines = len(sessions) + 3  # list + 1 blank line + 2 prompt lines
 
     def _render() -> None:
+        try:
+            import shutil
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
+            
+        max_name_len = max(10, term_width - 12)
+        
         lines = []
         for i, name in enumerate(sessions):
+            display_name = name if len(name) <= max_name_len else name[:max_name_len-3] + "..."
+            
             prefix = "❯" if i == selected_idx else " "
             if name == active_session:
                 icon = green("●")
-                colored_name = cyan(name) if i != delete_confirm_idx else red(name)
+                colored_name = cyan(display_name) if i != delete_confirm_idx else red(display_name)
             else:
                 icon = dim("○")
-                colored_name = white(name) if i != delete_confirm_idx else red(name)
+                colored_name = white(display_name) if i != delete_confirm_idx else red(display_name)
                 
             if i == selected_idx:
                 colored_name = bold(colored_name)
@@ -56,9 +67,11 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
             
         lines.append("")
         if delete_confirm_idx != -1:
-            lines.append(f"  {red('Press')} {bold(red('d'))} {red('again to confirm delete, or any other key to cancel')}")
+            lines.append(f"  {red('Press')} {bold(red('d'))} {red('again to confirm delete')}")
+            lines.append(f"  {dim('or press any other key to cancel')}")
         else:
-            lines.append(f"  {dim('Use ↑/↓ to move, ')}Enter{dim(' to switch, ')}d{dim(' to delete, ')}q/Esc{dim(' to cancel')}")
+            lines.append(f"  {dim('↑/↓: move   Enter: switch')}")
+            lines.append(f"  {dim('d: delete   q/Esc: cancel')}")
         
         # In raw mode, we must use \r\n
         for line in lines:
