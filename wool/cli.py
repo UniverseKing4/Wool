@@ -92,6 +92,8 @@ async def run_repl() -> None:
             user_input = input(_prompt(turn))
         except KeyboardInterrupt:
             print()
+            if readline.get_line_buffer():
+                continue
             break
         except EOFError:
             print()
