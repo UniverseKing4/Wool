@@ -45,6 +45,7 @@ class SlashCommandHandler:
             "/models": self._models,
             "/session": self._session,
             "/new": self._new,
+            "/rename": self._rename,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/usage": self._usage,
@@ -72,8 +73,9 @@ class SlashCommandHandler:
             ("/provider list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
-            ("/session [list|switch|new|rename|delete]", "Manage conversation sessions"),
-            ("/new [name]", "Create and switch to a new session (alias for /session new)"),
+            ("/session [delete <name>]", "Open interactive session menu (or delete a specific session)"),
+            ("/new [name]", "Create and switch to a new session"),
+            ("/rename <new_name>", "Rename the current session"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -307,41 +309,31 @@ class SlashCommandHandler:
             if action == "delete":
                 return await self._session(f"delete {selected_name}")
             else:
-                return await self._session(f"switch {selected_name}")
+                self.agent.save_session()
+                self.agent.config.active_session = selected_name
+                self.agent.config.save()
+                self.agent.load_session()
+                self.agent.save_session()
+                success(f"Switched to session '{selected_name}'.")
+                return False
 
-        elif sub in ("switch", "new"):
+        elif sub == "new":
             if len(parts) < 2:
-                if sub == "new":
-                    import time
-                    name = f"session_{int(time.time())}"
-                else:
-                    ansi_error(f"Usage: /session {sub} <name>")
-                    return False
+                import time
+                name = f"session_{int(time.time())}"
             else:
                 name = parts[1]
+                
             if name == self.agent.config.active_session:
                 info(f"Already in session '{name}'.")
                 return False
+                
             self.agent.save_session()
             self.agent.config.active_session = name
             self.agent.config.save()
             self.agent.load_session()
             self.agent.save_session()
             success(f"Switched to session '{name}'.")
-
-        elif sub == "rename":
-            if len(parts) < 2:
-                ansi_error("Usage: /session rename <new_name>")
-                return False
-            new_name = parts[1]
-            old_path = self.agent.get_session_path()
-            self.agent.config.active_session = new_name
-            self.agent.config.save()
-            new_path = self.agent.get_session_path()
-            if old_path.exists():
-                old_path.rename(new_path)
-            self.agent.save_session()
-            success(f"Session renamed to '{new_name}'.")
 
         elif sub == "delete":
             if len(parts) < 2:
@@ -359,12 +351,28 @@ class SlashCommandHandler:
                 ansi_error(f"Session '{name}' not found.")
                 
         else:
-            ansi_error("Unknown sub-command. Try: list, switch, new, rename, delete")
+            ansi_error("Unknown sub-command. Try: new, delete")
 
         return False
 
     async def _new(self, args: str) -> bool:
         return await self._session(f"new {args}")
+
+    async def _rename(self, args: str) -> bool:
+        parts = args.strip().split()
+        if not parts:
+            ansi_error("Usage: /rename <new_name>")
+            return False
+        new_name = parts[0]
+        old_path = self.agent.get_session_path()
+        self.agent.config.active_session = new_name
+        self.agent.config.save()
+        new_path = self.agent.get_session_path()
+        if old_path.exists():
+            old_path.rename(new_path)
+        self.agent.save_session()
+        success(f"Session renamed to '{new_name}'.")
+        return False
 
     # ── /usage ────────────────────────────────────────────────────────────
 

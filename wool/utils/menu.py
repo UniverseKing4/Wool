@@ -1,4 +1,5 @@
 import sys
+import select
 import termios
 import tty
 from typing import Callable
@@ -55,7 +56,7 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
             lines.append(f"  {color_prefix} {icon} {colored_name}")
             
         lines.append("")
-        lines.append(f"  {dim('Use ↑/↓ to move, ')}Enter{dim(' to switch, ')}d{dim(' to delete, ')}q{dim(' to cancel')}")
+        lines.append(f"  {dim('Use ↑/↓ to move, ')}Enter{dim(' to switch, ')}d{dim(' to delete, ')}q/Esc{dim(' to cancel')}")
         
         # In raw mode, we must use \r\n
         for line in lines:
@@ -85,13 +86,18 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
                     delete_confirm_idx = selected_idx
             
             elif ch == '\x1b':  # Escape sequence
-                seq = sys.stdin.read(2)
-                if seq == '[A':  # Up
-                    selected_idx = (selected_idx - 1) % len(sessions)
-                    delete_confirm_idx = -1
-                elif seq == '[B':  # Down
-                    selected_idx = (selected_idx + 1) % len(sessions)
-                    delete_confirm_idx = -1
+                r, _, _ = select.select([sys.stdin], [], [], 0.05)
+                if r:
+                    seq = sys.stdin.read(2)
+                    if seq == '[A':  # Up
+                        selected_idx = (selected_idx - 1) % len(sessions)
+                        delete_confirm_idx = -1
+                    elif seq == '[B':  # Down
+                        selected_idx = (selected_idx + 1) % len(sessions)
+                        delete_confirm_idx = -1
+                else:
+                    sys.stdout.write(f"\r\033[K\r\n")
+                    return None
             
             else:
                 delete_confirm_idx = -1
