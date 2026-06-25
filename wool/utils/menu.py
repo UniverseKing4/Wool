@@ -1,3 +1,4 @@
+import os
 import sys
 import select
 import termios
@@ -68,7 +69,7 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
         _render()
         
         while True:
-            ch = sys.stdin.read(1)
+            ch = os.read(fd, 1).decode("utf-8", errors="ignore")
             
             if ch == '\x03' or ch.lower() == 'q':  # Ctrl+C or q
                 sys.stdout.write(f"\r\033[K\r\n")
@@ -86,13 +87,13 @@ def run_session_menu(sessions: list[str], active_session: str) -> tuple[str, str
                     delete_confirm_idx = selected_idx
             
             elif ch == '\x1b':  # Escape sequence
-                r, _, _ = select.select([sys.stdin], [], [], 0.05)
+                r, _, _ = select.select([fd], [], [], 0.05)
                 if r:
-                    seq = sys.stdin.read(2)
-                    if seq == '[A':  # Up
+                    seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+                    if seq in ('[A', 'OA'):  # Up
                         selected_idx = (selected_idx - 1) % len(sessions)
                         delete_confirm_idx = -1
-                    elif seq == '[B':  # Down
+                    elif seq in ('[B', 'OB'):  # Down
                         selected_idx = (selected_idx + 1) % len(sessions)
                         delete_confirm_idx = -1
                 else:
