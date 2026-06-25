@@ -80,7 +80,7 @@ class StreamPrinter:
         if self._started and full.strip() and self._render_md and sys.stdout.isatty():
             # Ensure we're on a new line before rewriting.
             if full and not full.endswith("\n"):
-                sys.stdout.write("\n")
+                sys.stdout.write("\r\n")
                 self._line_count += 1
 
             # Only rewind if we haven't scrolled the terminal off-screen
@@ -91,13 +91,13 @@ class StreamPrinter:
 
                 # Render markdown and print.
                 rendered = render_markdown(full.strip(), base_style=self._base_style)
-                sys.stdout.write(rendered + "\n")
+                sys.stdout.write(rendered + "\r\n")
                 sys.stdout.flush()
             else:
                 # Terminal scrolled; rewinding would corrupt the screen.
                 # Just ensure there's a trailing newline.
                 if not full.endswith("\n"):
-                    sys.stdout.write("\n")
+                    sys.stdout.write("\r\n")
                     sys.stdout.flush()
 
         elif self._started and full:

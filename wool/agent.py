@@ -165,7 +165,7 @@ class WoolAgent:
             # Execute each tool call and feed results back.
             for tc in pending_tool_calls:
                 yield "tool_start", tc.name
-                yield "tool", f"\n  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\n"
+                yield "tool", f"\r\n  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
 
                 try:
                     args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
@@ -174,10 +174,10 @@ class WoolAgent:
 
                 if args:
                     args_fmt = json.dumps(args, indent=2)
-                    yield "tool", f"  {dim('│')} {bold('Arguments:')}\n"
+                    yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
                     for line in args_fmt.splitlines():
-                        yield "tool", f"  {dim('│')} {line}\n"
-                    yield "tool", f"  {dim('│')}\n"
+                        yield "tool", f"  {dim('│')} {line}\r\n"
+                    yield "tool", f"  {dim('│')}\r\n"
 
                 # Try built-in tools first.
                 tool = self.tool_registry.get(tc.name)
@@ -203,10 +203,10 @@ class WoolAgent:
                 output_lines = result_text.splitlines()
                 num_lines = len(output_lines)
                 
-                yield "tool", f"  {dim('│')} {bold(f'Result ({num_lines} lines):')}\n"
+                yield "tool", f"  {dim('│')} {bold(f'Result ({num_lines} lines):')}\r\n"
                 for line in output_lines:
-                    yield "tool", f"  {dim('│')} {dim(line)}\n"
-                yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\n\n"
+                    yield "tool", f"  {dim('│')} {dim(line)}\r\n"
+                yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
 
                 self.messages.append(ChatMessage(
                     role="tool",

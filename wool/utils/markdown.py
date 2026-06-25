@@ -213,13 +213,13 @@ def render_markdown(text: str, *, stream: TextIO | None = None, base_style: str 
         out.append(f"  {styled}" if styled.strip() else "")
         i += 1
 
-    result = "\n".join(out)
+    result = "\r\n".join(out)
     if _tty() and base_style:
         # Prepend base style and re-apply it after every reset
         result = base_style + result.replace(_RST, _RST + base_style) + _RST
         
     if stream is not None:
-        stream.write(result)
+        stream.write(result + "\r\n")
         stream.flush()
     return result
 

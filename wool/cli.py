@@ -233,7 +233,7 @@ async def run_repl() -> None:
                     if chunk_type == "text":
                         if has_reasoned and not transitioned:
                             reasoning_printer.finish()
-                            sys.stdout.write("\n\n")
+                            sys.stdout.write("\r\n\r\n")
                             sys.stdout.flush()
                             transitioned = True
                         printer.print_chunk(chunk)
@@ -245,7 +245,7 @@ async def run_repl() -> None:
                     elif chunk_type == "tool":
                         if has_reasoned and not transitioned:
                             reasoning_printer.finish()
-                            sys.stdout.write("\n\n")
+                            sys.stdout.write("\r\n\r\n")
                             sys.stdout.flush()
                             transitioned = True
                         printer.finish()
