@@ -164,6 +164,7 @@ class WoolAgent:
 
             # Execute each tool call and feed results back.
             for tc in pending_tool_calls:
+                yield "tool_start", tc.name
                 yield "tool", f"\n  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\n"
 
                 try:

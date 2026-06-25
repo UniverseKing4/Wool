@@ -184,15 +184,17 @@ async def run_repl() -> None:
 
                     if chunk_type == "text":
                         if has_reasoned and not transitioned:
-                            printer.print_chunk("\n\n")
+                            sys.stdout.write("\n\n")
+                            sys.stdout.flush()
                             transitioned = True
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
                         has_reasoned = True
                         sys.stdout.write(dim(gray(chunk)))
                         sys.stdout.flush()
-                    elif chunk_type == "tool":
+                    elif chunk_type == "tool_start":
                         tools_used += 1
+                    elif chunk_type == "tool":
                         if has_reasoned and not transitioned:
                             sys.stdout.write("\n\n")
                             sys.stdout.flush()
