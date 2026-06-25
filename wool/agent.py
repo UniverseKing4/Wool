@@ -234,7 +234,29 @@ class WoolAgent:
                         
                 return tc, args, result_text
 
-            tasks = {tc.id: asyncio.create_task(execute_tool(tc)) for tc in pending_tool_calls}
+            tasks = {}
+            for tc in pending_tool_calls:
+                if tc.name == "use_subagent":
+                    # Fire and forget for true background concurrency!
+                    async def run_bg_subagent(bg_tc):
+                        _, _, bg_res = await execute_tool(bg_tc)
+                        output_lines = bg_res.splitlines()
+                        num_lines = len(output_lines)
+                        
+                        import sys
+                        sys.stdout.write(f"\r\n\r\n  {dim('┌─')} {cyan('use_subagent')} {bold(f'Background Result ({num_lines} lines):')} {dim('─────────────')}\r\n")
+                        for line in output_lines:
+                            sys.stdout.write(f"  {dim('│')} {dim(line)}\r\n")
+                        sys.stdout.write(f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n")
+                        sys.stdout.flush()
+
+                    asyncio.create_task(run_bg_subagent(tc))
+                    # Return immediate success to the LLM so it can continue!
+                    async def instant_success(tc):
+                        return tc, {}, "Subagent successfully spawned and is running in the background. You may continue your work."
+                    tasks[tc.id] = asyncio.create_task(instant_success(tc))
+                else:
+                    tasks[tc.id] = asyncio.create_task(execute_tool(tc))
 
             # 1. Print all tool headers and arguments IMMEDIATELY
             for tc in pending_tool_calls:
@@ -252,7 +274,10 @@ class WoolAgent:
                     for line in args_fmt.splitlines():
                         yield "tool", f"  {dim('│')} {line}\r\n"
                         
-                yield "tool", f"  {dim('└─')} {dim('[Running background task...]')}\r\n\r\n"
+                if tc.name == "use_subagent":
+                    yield "tool", f"  {dim('└─')} {dim('[Spawned background task]')}\r\n\r\n"
+                else:
+                    yield "tool", f"  {dim('└─')} {dim('[Running background task...]')}\r\n\r\n"
 
             # 2. Wait for them as they complete and print results in separate boxes!
             completed_results: dict[str, str] = {}
