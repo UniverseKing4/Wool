@@ -258,7 +258,8 @@ async def run_repl() -> None:
                 await task
             printer.finish()
             if tools_used > 0:
-                print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
+                word = "tool" if tools_used == 1 else "tools"
+                print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
             print(f"\n{dim('  (interrupted)')}")
             continue
         finally:
@@ -267,7 +268,8 @@ async def run_repl() -> None:
 
         printer.finish()
         if tools_used > 0:
-            print(f"\n{dim(f'  (Executed {tools_used} tools)')}")
+            word = "tool" if tools_used == 1 else "tools"
+            print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
         print()  # spacer after response
         turn += 1
 
