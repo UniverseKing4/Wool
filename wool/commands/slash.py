@@ -73,7 +73,7 @@ class SlashCommandHandler:
             ("/provider list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
-            ("/session [delete <name>]", "Open interactive session menu (or delete a specific session)"),
+            ("/session", "Open interactive session menu"),
             ("/new [name]", "Create and switch to a new session"),
             ("/rename <new_name>", "Rename the current session"),
             ("/tools", "List available tools"),
@@ -308,7 +308,24 @@ class SlashCommandHandler:
                     
                 action, selected_name = result
                 if action == "delete":
-                    await self._session(f"delete {selected_name}")
+                    name = selected_name
+                    path = self.agent.get_session_path(name)
+                    
+                    if path.exists():
+                        path.unlink()
+                        success(f"Session '{name}' deleted.")
+                    else:
+                        ansi_error(f"Session '{name}' not found.")
+                        continue
+                        
+                    if name == self.agent.config.active_session:
+                        if name != "default":
+                            self.agent.config.active_session = "default"
+                            self.agent.config.save()
+                            self.agent.load_session()
+                            success("Switched to session 'default'.")
+                        else:
+                            self.agent.clear_history()
                 else:
                     self.agent.save_session()
                     self.agent.config.active_session = selected_name
@@ -336,31 +353,8 @@ class SlashCommandHandler:
             self.agent.save_session()
             success(f"Switched to session '{name}'.")
 
-        elif sub == "delete":
-            if len(parts) < 2:
-                ansi_error("Usage: /session delete <name>")
-                return False
-            name = parts[1]
-            path = self.agent.get_session_path(name)
-            
-            if path.exists():
-                path.unlink()
-                success(f"Session '{name}' deleted.")
-            else:
-                ansi_error(f"Session '{name}' not found.")
-                return False
-                
-            if name == self.agent.config.active_session:
-                if name != "default":
-                    self.agent.config.active_session = "default"
-                    self.agent.config.save()
-                    self.agent.load_session()
-                    success("Switched to session 'default'.")
-                else:
-                    self.agent.clear_history()
-                
         else:
-            ansi_error("Unknown sub-command. Try: new, delete")
+            ansi_error("Unknown sub-command. Try: new")
 
         return False
 
