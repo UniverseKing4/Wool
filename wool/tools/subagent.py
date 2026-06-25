@@ -67,10 +67,11 @@ class SubagentDelegation(Tool):
         # Prevent infinite subagent recursion
         sub_agent.tool_registry._tools.pop("use_subagent", None)
         
-        # Restrict tools if specified
+        # Restrict tools if specified, handling 'default_api:' prefixes
         if tools:
+            clean_tools = [t.replace("default_api:", "") for t in tools]
             for name in list(sub_agent.tool_registry._tools.keys()):
-                if name not in tools:
+                if name not in clean_tools:
                     sub_agent.tool_registry._tools.pop(name, None)
 
         prompt = f"TASK:\n{task}\n"
@@ -84,7 +85,9 @@ class SubagentDelegation(Tool):
                 pass
                 
             if sub_agent.messages and sub_agent.messages[-1].role == "assistant":
-                final_output = sub_agent.messages[-1].content
+                import re
+                final_output = sub_agent.messages[-1].content or ""
+                final_output = re.sub(r'<think>.*?</think>', '', final_output, flags=re.DOTALL).strip()
             else:
                 final_output = "The subagent completed its execution but did not produce a final response."
                 
