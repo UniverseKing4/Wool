@@ -165,7 +165,7 @@ class WoolAgent:
             # Execute each tool call and feed results back.
             for tc in pending_tool_calls:
                 yield "tool_start", tc.name
-                yield "tool", f"\r\n  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
+                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
 
                 try:
                     args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
