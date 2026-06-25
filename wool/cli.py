@@ -58,7 +58,19 @@ def _print_banner(agent: WoolAgent) -> None:
 
 
 def _prompt(turn: int) -> str:
-    return f"  {dim(str(turn))} {bold(cyan('wool'))} {dim('›')} "
+    if not sys.stdout.isatty():
+        return f"  {turn} wool › "
+        
+    # Readline requires \001 and \002 around non-printable ANSI escape sequences
+    # to calculate the visible width of the prompt correctly. If omitted, typing
+    # long strings will wrap incorrectly and overwrite the prompt.
+    S = "\001"
+    E = "\002"
+    return (
+        f"  {S}\033[2m{E}{turn}{S}\033[0m{E} "
+        f"{S}\033[1m\033[36m{E}wool{S}\033[0m{E} "
+        f"{S}\033[2m{E}›{S}\033[0m{E} "
+    )
 
 
 # ── REPL ──────────────────────────────────────────────────────────────────────
