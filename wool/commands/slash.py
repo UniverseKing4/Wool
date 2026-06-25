@@ -504,20 +504,24 @@ class SlashCommandHandler:
         if target_idx is None:
             return False
             
-        # We keep messages up to the target_idx, AND any subsequent AI messages
-        # before the next user message.
-        cutoff_idx = len(self.agent.messages)
-        for i in range(target_idx + 1, len(self.agent.messages)):
-            if self.agent.messages[i].role == "user":
-                cutoff_idx = i
-                break
-                
-        if cutoff_idx == len(self.agent.messages):
-            info("Already at the selected point in history.")
-            return False
+        selected_user_msg = self.agent.messages[target_idx].content
             
-        self.agent.messages = self.agent.messages[:cutoff_idx]
+        # Drop the selected message and everything after it
+        self.agent.messages = self.agent.messages[:target_idx]
         self.agent.save_session()
+        
+        if selected_user_msg:
+            try:
+                import readline
+                def pre_input_hook():
+                    readline.insert_text(selected_user_msg)
+                    readline.redisplay()
+                    readline.set_pre_input_hook(None)
+                readline.set_pre_input_hook(pre_input_hook)
+            except ImportError:
+                # Fallback if readline is not available (e.g. Windows)
+                pass
+                
         success("Conversation history rewound successfully.")
         return False
 
