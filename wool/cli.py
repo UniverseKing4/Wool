@@ -10,6 +10,7 @@ import asyncio
 import sys
 import termios
 import tty
+import readline
 
 from wool import __version__
 from wool.agent import WoolAgent
@@ -71,6 +72,16 @@ async def run_repl() -> None:
     _print_banner(agent)
 
     turn = 1
+    typeahead_buffer: list[str] = []
+    
+    def _pre_input_hook() -> None:
+        if typeahead_buffer:
+            text = "".join(typeahead_buffer)
+            readline.insert_text(text)
+            readline.redisplay()
+            typeahead_buffer.clear()
+            
+    readline.set_pre_input_hook(_pre_input_hook)
 
     while True:
         # ── read ──
@@ -105,6 +116,11 @@ async def run_repl() -> None:
             ch = sys.stdin.read(1)
             if ch == '\x1b' or ch == '\x03':  # Escape or Ctrl+C
                 cancel_event.set()
+            elif ch in ('\x7f', '\b'):  # Backspace
+                if typeahead_buffer:
+                    typeahead_buffer.pop()
+            elif ch.isprintable() or ch == ' ':
+                typeahead_buffer.append(ch)
 
         is_thinking = asyncio.Event()
         is_thinking.set()
