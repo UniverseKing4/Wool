@@ -113,6 +113,7 @@ class WoolAgent:
         """
         self._ensure_system_message()
         self.messages.append(ChatMessage(role="user", content=user_input))
+        self.save_session()
 
         if not self.active_provider:
             yield "text", (
@@ -168,6 +169,7 @@ class WoolAgent:
                 content=final_content or None,
                 tool_calls=pending_tool_calls or None,
             ))
+            self.save_session()
 
             # If there are no tool calls, we're done.
             if not pending_tool_calls:
@@ -225,6 +227,7 @@ class WoolAgent:
                     tool_call_id=tc.id,
                     name=tc.name,
                 ))
+                self.save_session()
 
             # Loop continues — LLM will process the tool results.
 

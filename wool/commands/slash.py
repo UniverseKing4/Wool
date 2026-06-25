@@ -44,6 +44,7 @@ class SlashCommandHandler:
             "/model": self._model,
             "/models": self._models,
             "/session": self._session,
+            "/new": self._new,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/usage": self._usage,
@@ -72,6 +73,7 @@ class SlashCommandHandler:
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
             ("/session [list|switch|new|rename|delete]", "Manage conversation sessions"),
+            ("/new <name>", "Create and switch to a new session (alias for /session new)"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -350,6 +352,9 @@ class SlashCommandHandler:
             ansi_error("Unknown sub-command. Try: list, switch, new, rename, delete")
 
         return False
+
+    async def _new(self, args: str) -> bool:
+        return await self._session(f"new {args}")
 
     # ── /usage ────────────────────────────────────────────────────────────
 
