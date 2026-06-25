@@ -428,17 +428,31 @@ class SlashCommandHandler:
     # ── /usage ────────────────────────────────────────────────────────────
 
     async def _usage(self, _args: str) -> bool:
-        usage = self.agent.total_usage
-        prompt = usage.get("prompt_tokens", 0)
-        completion = usage.get("completion_tokens", 0)
-        total = usage.get("total_tokens", 0)
+        prompt = 0
+        completion = 0
+        
+        for msg in self.agent.messages:
+            if msg.role == "assistant" and getattr(msg, "usage", None):
+                prompt += msg.usage.get("prompt_tokens", 0)
+                completion += msg.usage.get("completion_tokens", 0)
+                
+        total = prompt + completion
+        
+        current_ctx = 0
+        for msg in reversed(self.agent.messages):
+            if msg.role == "assistant" and getattr(msg, "usage", None):
+                current_ctx = msg.usage.get("prompt_tokens", 0) + msg.usage.get("completion_tokens", 0)
+                break
         
         print()
-        print(f"  {bold(cyan('Session Token Usage'))}")
-        print(f"  {dim('Prompt:')}     {prompt:,}")
-        print(f"  {dim('Completion:')} {completion:,}")
-        print(f"  {dim('Total:')}      {bold(f'{total:,}')}")
+        print(f"  {bold(cyan('Session Token Usage (Dynamic)'))}")
+        print(f"  {dim('Cumulative Prompt:')}     {prompt:,}")
+        print(f"  {dim('Cumulative Completion:')} {completion:,}")
+        print(f"  {dim('Cumulative Total:')}      {bold(f'{total:,}')}")
         print()
+        if current_ctx > 0:
+            print(f"  {dim('Current Context Size:')}  {current_ctx:,} {dim('tokens')}")
+            print()
         return False
 
     # ── /clear ────────────────────────────────────────────────────────────

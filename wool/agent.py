@@ -133,6 +133,7 @@ class WoolAgent:
             accumulated_text = ""
             accumulated_reasoning = ""
             pending_tool_calls: list[ToolCall] = []
+            last_usage = None
 
             try:
                 async for event in self.active_provider.chat_completion_stream(
@@ -150,6 +151,7 @@ class WoolAgent:
                     elif event.type == "tool_call" and event.tool_call:
                         pending_tool_calls.append(event.tool_call)
                     elif event.type == "usage" and event.usage:
+                        last_usage = event.usage
                         for k, v in event.usage.items():
                             if isinstance(v, int):
                                 self.total_usage[k] = self.total_usage.get(k, 0) + v
@@ -169,6 +171,7 @@ class WoolAgent:
                 role="assistant",
                 content=final_content or None,
                 tool_calls=pending_tool_calls or None,
+                usage=last_usage,
             ))
             self.save_session()
 

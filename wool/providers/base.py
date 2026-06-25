@@ -25,6 +25,7 @@ class ChatMessage:
     tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
     name: str | None = None
+    usage: dict | None = None
 
     def to_dict(self) -> dict:
         """Serialise for the OpenAI-compatible API."""
@@ -37,6 +38,8 @@ class ChatMessage:
             d["tool_call_id"] = self.tool_call_id
         if self.name is not None:
             d["name"] = self.name
+        if self.usage is not None:
+            d["usage"] = self.usage
         return d
 
     @classmethod
@@ -49,7 +52,8 @@ class ChatMessage:
             content=data.get("content"),
             tool_calls=tcs,
             tool_call_id=data.get("tool_call_id"),
-            name=data.get("name")
+            name=data.get("name"),
+            usage=data.get("usage")
         )
 
 
