@@ -201,30 +201,39 @@ class WoolAgent:
                         
                 return tc, args, result_text
 
-            tasks = [asyncio.create_task(execute_tool(tc)) for tc in pending_tool_calls]
+            tasks = {tc.id: asyncio.create_task(execute_tool(tc)) for tc in pending_tool_calls}
 
-            for completed_task in asyncio.as_completed(tasks):
-                tc, args, result_text = await completed_task
-                
+            # 1. Print all tool headers and arguments IMMEDIATELY
+            for tc in pending_tool_calls:
                 yield "tool_start", tc.name
                 yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {dim('──────────────────────────────────────────')}\r\n"
+
+                try:
+                    args: dict[str, Any] = json.loads(tc.arguments) if tc.arguments else {}
+                except json.JSONDecodeError:
+                    args = {}
 
                 if args:
                     args_fmt = json.dumps(args, indent=2)
                     yield "tool", f"  {dim('│')} {bold('Arguments:')}\r\n"
                     for line in args_fmt.splitlines():
                         yield "tool", f"  {dim('│')} {line}\r\n"
-                    yield "tool", f"  {dim('│')}\r\n"
+                        
+                yield "tool", f"  {dim('└─')} {dim('[Running background task...]')}\r\n\r\n"
+
+            # 2. Wait for them as they complete and print results in separate boxes!
+            for completed_task in asyncio.as_completed(tasks.values()):
+                tc, args, result_text = await completed_task
 
                 # Cap result length to avoid excessive memory usage.
                 if len(result_text) > 30_000:
                     result_text = result_text[:30_000] + "\n… (truncated)"
 
-                # Show immersive full output with ANSI borders.
+                # Show immersive full output with ANSI borders for the result
                 output_lines = result_text.splitlines()
                 num_lines = len(output_lines)
                 
-                yield "tool", f"  {dim('│')} {bold(f'Result ({num_lines} lines):')}\r\n"
+                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n"
                 for line in output_lines:
                     yield "tool", f"  {dim('│')} {dim(line)}\r\n"
                 yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
