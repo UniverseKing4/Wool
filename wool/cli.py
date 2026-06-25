@@ -82,6 +82,19 @@ async def run_repl() -> None:
     agent = WoolAgent(config)
     commands = SlashCommandHandler(agent)
 
+    if config.mcp_servers:
+        from wool.utils.ansi import red, info, success
+
+        print()
+        info("Restoring MCP connections...")
+        for name, mcp_cfg in config.mcp_servers.items():
+            if "command" in mcp_cfg:
+                try:
+                    await agent.mcp_manager.connect(name, command=mcp_cfg["command"])
+                except Exception as e:
+                    print(f"  {red('✗')} Failed to auto-connect MCP '{name}': {e}")
+        success(f"Restored {len(agent.mcp_manager.list_servers())} MCP servers.\n")
+
     _print_banner(agent)
 
     typeahead_buffer: list[str] = []

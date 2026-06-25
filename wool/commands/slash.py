@@ -328,6 +328,8 @@ class SlashCommandHandler:
             info(f"Connecting to MCP server '{name}'...")
             try:
                 await self.agent.mcp_manager.connect(name, command=command)
+                self.agent.config.mcp_servers[name] = {"command": command}
+                self.agent.config.save()
                 tools = self.agent.mcp_manager._clients[name].tools
                 success(f"Connected to '{name}' — {len(tools)} tools available.")
             except Exception as exc:
@@ -339,6 +341,8 @@ class SlashCommandHandler:
                 return False
             name = parts[1]
             await self.agent.mcp_manager.disconnect(name)
+            self.agent.config.mcp_servers.pop(name, None)
+            self.agent.config.save()
             success(f"Disconnected from '{name}'.")
 
         else:

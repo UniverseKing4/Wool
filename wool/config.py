@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 
 CONFIG_DIR: Path = Path.home() / ".config" / "wool"
@@ -34,6 +34,7 @@ class WoolConfig:
     active_provider: str | None = None
     active_model: str | None = None
     active_session: str = "default"
+    mcp_servers: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # ── persistence ───────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ class WoolConfig:
             active_provider=raw.get("active_provider"),
             active_model=raw.get("active_model"),
             active_session=raw.get("active_session", "default"),
+            mcp_servers=raw.get("mcp_servers", {}),
         )
 
     def save(self) -> None:
@@ -70,6 +72,7 @@ class WoolConfig:
             "active_provider": self.active_provider,
             "active_model": self.active_model,
             "active_session": self.active_session,
+            "mcp_servers": self.mcp_servers,
         }
         temp_path = CONFIG_FILE.with_suffix(".tmp")
         temp_path.write_text(
