@@ -173,7 +173,7 @@ async def run_repl() -> None:
                 pass
             finally:
                 if spinner_active and is_thinking.is_set():
-                    sys.stdout.write("\r\033[K")
+                    sys.stdout.write("\r" + " " * 30 + "\r")
                     sys.stdout.flush()
 
         tools_used = 0
@@ -227,7 +227,7 @@ async def run_repl() -> None:
                         
                     if is_thinking.is_set():
                         is_thinking.clear()
-                        sys.stdout.write("\r\033[K")
+                        sys.stdout.write("\r" + " " * 30 + "\r")
                         sys.stdout.flush()
                         
                     chunk_type, chunk = chunk_tuple
@@ -300,10 +300,7 @@ async def run_repl() -> None:
                     task.cancel()
                     await task
                 printer.finish()
-                if tools_used > 0:
-                    word = "tool" if tools_used == 1 else "tools"
-                    print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
-                print(f"\n{dim('  (cancelled via Escape)')}")
+                print(f"\r\n{dim('  (cancelled via Escape)')}")
                 continue
             else:
                 await task  # raise any exceptions
@@ -313,19 +310,12 @@ async def run_repl() -> None:
                 task.cancel()
                 await task
             printer.finish()
-            if tools_used > 0:
-                word = "tool" if tools_used == 1 else "tools"
-                print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
-            print(f"\n{dim('  (interrupted)')}")
+            print(f"\r\n{dim('  (interrupted)')}")
             continue
         finally:
             loop.remove_reader(fd)
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-        printer.finish()
-        if tools_used > 0:
-            word = "tool" if tools_used == 1 else "tools"
-            print(f"\n{dim(f'  (Executed {tools_used} {word})')}")
         print()  # spacer after response
         turn += 1
 
