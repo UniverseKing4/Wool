@@ -53,6 +53,7 @@ class SlashCommandHandler:
             "/usage": self._usage,
             "/clear": self._clear,
             "/status": self._status,
+            "/rewind": self._rewind,
             "/copy": self._copy,
             "/exit": self._exit,
             "/quit": self._exit,
@@ -80,6 +81,7 @@ class SlashCommandHandler:
             ("/new [name]", "Create and switch to a new session"),
             ("/rename <new_name>", "Rename the current session"),
             ("/fork [name]", "Fork current conversation to a new session"),
+            ("/rewind", "Interactively rewind history to a specific message"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
             ("/usage", "View token usage for the current session"),
@@ -479,6 +481,46 @@ class SlashCommandHandler:
         print()
         return False
 
+    # ── /rewind ───────────────────────────────────────────────────────────
+
+    async def _rewind(self, _args: str) -> bool:
+        from wool.utils.menu import run_rewind_menu
+        
+        # Build list of user messages
+        user_msgs = []
+        for i, m in enumerate(self.agent.messages):
+            if m.role == "user" and m.content:
+                # Replace newlines with spaces and truncate for display
+                snippet = " ".join(m.content.split())
+                if len(snippet) > 60:
+                    snippet = snippet[:57] + "..."
+                user_msgs.append((i, snippet))
+                
+        if not user_msgs:
+            warning("No user messages found in this session.")
+            return False
+            
+        target_idx = run_rewind_menu(user_msgs)
+        if target_idx is None:
+            return False
+            
+        # We keep messages up to the target_idx, AND any subsequent AI messages
+        # before the next user message.
+        cutoff_idx = len(self.agent.messages)
+        for i in range(target_idx + 1, len(self.agent.messages)):
+            if self.agent.messages[i].role == "user":
+                cutoff_idx = i
+                break
+                
+        if cutoff_idx == len(self.agent.messages):
+            info("Already at the selected point in history.")
+            return False
+            
+        self.agent.messages = self.agent.messages[:cutoff_idx]
+        self.agent.save_session()
+        success("Conversation history rewound successfully.")
+        return False
+
     # ── /copy ─────────────────────────────────────────────────────────────
 
     async def _copy(self, _args: str) -> bool:
@@ -515,7 +557,7 @@ class SlashCommandHandler:
             # if they are in a terminal that supports it, or if they are headless they don't care.
             pass
             
-        success("Copied the last AI response to clipboard (OSC 52).")
+        success("Copied the last AI response to clipboard.")
         return False
 
     # ── /exit ─────────────────────────────────────────────────────────────
