@@ -76,8 +76,8 @@ class StreamPrinter:
             # Only rewind if we haven't scrolled the terminal off-screen
             if 0 < self._line_count < self._rows:
                 # Move cursor up to the start of the streamed output and clear.
-                sys.stdout.write(f"\033[{self._line_count}A")  # move up
-                sys.stdout.write(f"\033[0J")  # clear from cursor to end
+                sys.stdout.write(f"\r\033[{self._line_count}A")  # carriage return + move up
+                sys.stdout.write("\033[0J")  # clear from cursor to end
 
                 # Render markdown and print.
                 rendered = render_markdown(full.strip())

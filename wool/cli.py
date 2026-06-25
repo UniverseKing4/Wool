@@ -120,20 +120,20 @@ async def run_repl() -> None:
                         sys.stdout.flush()
                         spinner_active = True
                         i += 1
-                        await asyncio.sleep(0.08)
+                        try:
+                            await asyncio.wait_for(cancel_event.wait(), 0.08)
+                        except asyncio.TimeoutError:
+                            pass
                     else:
-                        if spinner_active:
-                            sys.stdout.write("\r\033[K")
-                            sys.stdout.flush()
-                            spinner_active = False
-                        
                         wait_think = asyncio.create_task(is_thinking.wait())
                         wait_cancel = asyncio.create_task(cancel_event.wait())
                         await asyncio.wait([wait_think, wait_cancel], return_when=asyncio.FIRST_COMPLETED)
+                        if not wait_think.done(): wait_think.cancel()
+                        if not wait_cancel.done(): wait_cancel.cancel()
             except asyncio.CancelledError:
                 pass
             finally:
-                if spinner_active:
+                if spinner_active and is_thinking.is_set():
                     sys.stdout.write("\r\033[K")
                     sys.stdout.flush()
 
@@ -164,12 +164,20 @@ async def run_repl() -> None:
                         # This prevents the spinner from corrupting the current line if the network lags mid-sentence.
                         if last_chunk_type in (None, "tool"):
                             is_thinking.set()
+                            
+                        inner_cancel_wait = asyncio.create_task(cancel_event.wait())
                         await asyncio.wait(
-                            [next_task, asyncio.create_task(cancel_event.wait())], 
+                            [next_task, inner_cancel_wait], 
                             return_when=asyncio.FIRST_COMPLETED
                         )
+                        if not inner_cancel_wait.done():
+                            inner_cancel_wait.cancel()
+                            
                         if cancel_event.is_set():
                             break
+
+                    if not cancel_wait.done():
+                        cancel_wait.cancel()
 
                     try:
                         chunk_tuple = next_task.result()
@@ -178,7 +186,8 @@ async def run_repl() -> None:
                         
                     if is_thinking.is_set():
                         is_thinking.clear()
-                        await asyncio.sleep(0.01)  # tiny delay to ensure clear
+                        sys.stdout.write("\r\033[K")
+                        sys.stdout.flush()
                         
                     chunk_type, chunk = chunk_tuple
 
