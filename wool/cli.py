@@ -83,6 +83,7 @@ async def run_repl() -> None:
             typeahead_buffer.clear()
             
     readline.set_pre_input_hook(_pre_input_hook)
+    readline.parse_and_bind("set disable-completion on")
 
     while True:
         # ── read ──
@@ -91,7 +92,7 @@ async def run_repl() -> None:
             user_input = input(_prompt(turn))
         except KeyboardInterrupt:
             print()
-            continue
+            break
         except EOFError:
             print()
             break
