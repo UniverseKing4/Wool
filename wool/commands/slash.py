@@ -297,12 +297,40 @@ class SlashCommandHandler:
             files = {f.stem for f in sess_dir.glob("*.json")}
             files.add(self.agent.config.active_session)
             
-            for name in sorted(files):
+            session_list = sorted(files)
+            for i, name in enumerate(session_list, 1):
                 if name == self.agent.config.active_session:
-                    print(f"  {green('●')} {cyan(name)}")
+                    print(f"  {green(str(i) + '.')} {green('●')} {cyan(name)}")
                 else:
-                    print(f"  {dim('○')} {white(name)}")
+                    print(f"  {dim(str(i) + '.')} {dim('○')} {white(name)}")
             print()
+            
+            try:
+                choice = input(f"  {dim('Enter number to switch, ')}d <num>{dim(' to delete, or ')}q{dim(' to cancel: ')}").strip()
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return False
+
+            if not choice or choice.lower() == 'q':
+                return False
+                
+            is_delete = choice.lower().startswith('d ')
+            idx_str = choice[2:].strip() if is_delete else choice
+                
+            if not idx_str.isdigit():
+                ansi_error("Invalid selection.")
+                return False
+                
+            idx = int(idx_str) - 1
+            if idx < 0 or idx >= len(session_list):
+                ansi_error("Invalid selection.")
+                return False
+                
+            selected_name = session_list[idx]
+            if is_delete:
+                return await self._session(f"delete {selected_name}")
+            else:
+                return await self._session(f"switch {selected_name}")
 
         elif sub in ("switch", "new"):
             if len(parts) < 2:
