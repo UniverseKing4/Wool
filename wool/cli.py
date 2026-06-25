@@ -102,7 +102,13 @@ async def run_repl() -> None:
     auto_next_text = None
     
     while True:
-        turn = sum(1 for m in agent.messages if m.role == "user") + 1
+        def is_real_user(m):
+            if m.role != "user": return False
+            if not m.content: return True
+            if "Tool execution complete. Please continue" in m.content: return False
+            if "The background subagents have finished. Here are their final results:" in m.content: return False
+            return True
+        turn = sum(1 for m in agent.messages if is_real_user(m)) + 1
         
         # ── read ──
         if auto_next_text:
@@ -115,6 +121,7 @@ async def run_repl() -> None:
                 user_input = input(_prompt(turn))
             except KeyboardInterrupt:
                 print()
+                typeahead_buffer.clear()
                 if readline.get_line_buffer():
                     continue
                 break
@@ -148,8 +155,19 @@ async def run_repl() -> None:
         
         def on_input() -> None:
             ch = sys.stdin.read(1)
-            if ch == '\x1b' or ch == '\x03':  # Escape or Ctrl+C
+            if ch == '\x03':  # Ctrl+C
                 cancel_event.set()
+                typeahead_buffer.clear()
+            elif ch == '\x1b':  # Escape or start of escape sequence
+                import select
+                r, _, _ = select.select([sys.stdin.fileno()], [], [], 0.05)
+                if r:
+                    # It's an escape sequence (e.g. arrow keys), read and discard it
+                    sys.stdin.read(2)
+                else:
+                    # It's a plain Escape key press
+                    cancel_event.set()
+                    typeahead_buffer.clear()
             elif ch in ('\x7f', '\b'):  # Backspace
                 if typeahead_buffer:
                     typeahead_buffer.pop()
@@ -197,6 +215,7 @@ async def run_repl() -> None:
             last_chunk_type = None
             start_time = time.time()
             iterator = agent.process_input(text).__aiter__()
+            next_task = None
             try:
                 while True:
                     next_task = asyncio.create_task(iterator.__anext__())
@@ -276,6 +295,16 @@ async def run_repl() -> None:
             except asyncio.CancelledError:
                 pass
             finally:
+                if next_task and not next_task.done():
+                    next_task.cancel()
+                    try:
+                        await next_task
+                    except Exception:
+                        pass
+                try:
+                    await iterator.aclose()
+                except Exception:
+                    pass
                 if has_reasoned and not transitioned:
                     reasoning_printer.finish()
                     sys.stdout.write("\r\n")
@@ -314,7 +343,10 @@ async def run_repl() -> None:
                 auto_next_text = None
                 if not task.done():
                     task.cancel()
-                    await task
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
                 printer.finish()
                 print(f"\r\n{dim('  (cancelled via Escape)')}")
                 continue
@@ -322,12 +354,18 @@ async def run_repl() -> None:
                 if agent.messages and agent.messages[-1].role == "assistant" and agent.messages[-1].content:
                     if "<CONTINUE>" in agent.messages[-1].content:
                         auto_next_text = "<CONTINUE>"
-                await task  # raise any exceptions
+                try:
+                    await task  # raise any exceptions
+                except asyncio.CancelledError:
+                    pass
                 
         except KeyboardInterrupt:
             if not task.done():
                 task.cancel()
-                await task
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
             printer.finish()
             print(f"\r\n{dim('  (interrupted)')}")
             continue

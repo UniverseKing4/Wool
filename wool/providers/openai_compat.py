@@ -48,7 +48,10 @@ class OpenAICompatProvider(Provider):
         try:
             resp = await self._client.get(url)
             resp.raise_for_status()
-            data = resp.json().get("data", [])
+            try:
+                data = resp.json().get("data", [])
+            except (ValueError, json.JSONDecodeError) as exc:
+                raise RuntimeError(f"Failed to parse model list JSON: {exc}") from exc
             return [
                 Model(id=m["id"], name=m.get("name", m["id"]), provider=self.name)
                 for m in data
@@ -85,6 +88,7 @@ class OpenAICompatProvider(Provider):
 
         # Accumulators for streamed tool-call deltas.
         tc_index_map: dict[int, dict] = {}  # index → {id, name, arguments}
+        finish_emitted = False
         
         tag_parser = ThinkTagParser()
 
@@ -169,8 +173,8 @@ class OpenAICompatProvider(Provider):
                             entry["arguments"] += fn["arguments"]
 
                     # ── finish ──
-                    if finish and finish != "tool_calls":
-                        # Flush any remaining tool calls even without [DONE]
+                    if finish and not finish_emitted:
+                        finish_emitted = True
                         for _idx in sorted(tc_index_map):
                             tc = tc_index_map[_idx]
                             yield StreamEvent(
@@ -185,29 +189,32 @@ class OpenAICompatProvider(Provider):
                             yield StreamEvent(type=t_type, content=t_chunk)
                         tc_index_map.clear()
                         yield StreamEvent(type="done", finish_reason=finish)
-                        return
-                    if finish == "tool_calls":
-                        for _idx in sorted(tc_index_map):
-                            tc = tc_index_map[_idx]
-                            yield StreamEvent(
-                                type="tool_call",
-                                tool_call=ToolCall(
-                                    id=tc.get("id", ""),
-                                    name=tc.get("name", ""),
-                                    arguments=tc.get("arguments", ""),
-                                ),
-                            )
-                        for t_type, t_chunk in tag_parser.flush():
-                            yield StreamEvent(type=t_type, content=t_chunk)
-                        tc_index_map.clear()
-                        yield StreamEvent(type="done", finish_reason="tool_calls")
-                        return
+
+            if not finish_emitted:
+                for _idx in sorted(tc_index_map):
+                    tc = tc_index_map[_idx]
+                    yield StreamEvent(
+                        type="tool_call",
+                        tool_call=ToolCall(
+                            id=tc.get("id", ""),
+                            name=tc.get("name", ""),
+                            arguments=tc.get("arguments", ""),
+                        ),
+                    )
+                for t_type, t_chunk in tag_parser.flush():
+                    yield StreamEvent(type=t_type, content=t_chunk)
 
         except httpx.ReadTimeout:
+            for t_type, t_chunk in tag_parser.flush():
+                yield StreamEvent(type=t_type, content=t_chunk)
             yield StreamEvent(type="error", content="Read timeout from provider.")
         except httpx.ConnectError as exc:
+            for t_type, t_chunk in tag_parser.flush():
+                yield StreamEvent(type=t_type, content=t_chunk)
             yield StreamEvent(type="error", content=f"Connection error: {exc}")
         except httpx.HTTPError as exc:
+            for t_type, t_chunk in tag_parser.flush():
+                yield StreamEvent(type=t_type, content=t_chunk)
             yield StreamEvent(type="error", content=f"HTTP error: {exc}")
 
     # ── lifecycle ─────────────────────────────────────────────────────────

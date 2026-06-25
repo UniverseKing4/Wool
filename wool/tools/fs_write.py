@@ -94,15 +94,18 @@ class FileSystemWrite(Tool):
     # ── create ────────────────────────────────────────────────────────────
 
     async def _create(self, p: Path, kw: dict) -> ToolResult:
+        import asyncio
         content = kw.get("content", "")
         create_dirs = kw.get("create_dirs", True)
         if content is None:
             content = ""
 
         if create_dirs:
-            p.parent.mkdir(parents=True, exist_ok=True)
-        elif not p.parent.exists():
-            return ToolResult(success=False, output="", error=f"Parent dir missing: {p.parent}")
+            await asyncio.to_thread(p.parent.mkdir, parents=True, exist_ok=True)
+        else:
+            exists = await asyncio.to_thread(p.parent.exists)
+            if not exists:
+                return ToolResult(success=False, output="", error=f"Parent dir missing: {p.parent}")
 
         try:
             async with aiofiles.open(p, "w", encoding="utf-8") as f:
@@ -121,10 +124,12 @@ class FileSystemWrite(Tool):
         if new_str is None:
             new_str = ""
 
-        if not p.exists():
+        import asyncio
+        exists = await asyncio.to_thread(p.exists)
+        if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
 
-        self._backup(p)
+        await self._backup(p)
 
         try:
             async with aiofiles.open(p, "r", encoding="utf-8", errors="replace") as f:
@@ -154,10 +159,12 @@ class FileSystemWrite(Tool):
     async def _insert(self, p: Path, kw: dict) -> ToolResult:
         content = kw.get("content", "")
         line_no = int(kw.get("line", 1))
-        if not p.exists():
+        import asyncio
+        exists = await asyncio.to_thread(p.exists)
+        if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
 
-        self._backup(p)
+        await self._backup(p)
 
         try:
             async with aiofiles.open(p, "r", encoding="utf-8", errors="replace") as f:
@@ -180,7 +187,9 @@ class FileSystemWrite(Tool):
 
     async def _append(self, p: Path, kw: dict) -> ToolResult:
         content = kw.get("content", "")
-        if not p.exists():
+        import asyncio
+        exists = await asyncio.to_thread(p.exists)
+        if not exists:
             return ToolResult(success=False, output="", error=f"Not found: {p}")
         try:
             async with aiofiles.open(p, "a", encoding="utf-8") as f:
@@ -192,10 +201,11 @@ class FileSystemWrite(Tool):
     # ── helpers ───────────────────────────────────────────────────────────
 
     @staticmethod
-    def _backup(p: Path) -> None:
+    async def _backup(p: Path) -> None:
         """Create a .wool.bak backup before destructive edits."""
+        import asyncio
         bak = p.with_suffix(p.suffix + ".wool.bak")
         try:
-            shutil.copy2(p, bak)
+            await asyncio.to_thread(shutil.copy2, p, bak)
         except OSError:
             pass  # best-effort

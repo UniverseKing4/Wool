@@ -79,6 +79,12 @@ class MCPClient:
     async def disconnect(self) -> None:
         """Shut down the MCP server."""
         self._connected = False
+        
+        for fut in self._pending.values():
+            if not fut.done():
+                fut.set_exception(RuntimeError("MCP disconnected"))
+        self._pending.clear()
+        
         if self._reader_task and not self._reader_task.done():
             self._reader_task.cancel()
             try:
@@ -95,6 +101,10 @@ class MCPClient:
                 await asyncio.wait_for(self._process.wait(), timeout=5)
             except (asyncio.TimeoutError, ProcessLookupError):
                 self._process.kill()
+                try:
+                    await asyncio.wait_for(self._process.wait(), timeout=1)
+                except Exception:
+                    pass
             self._process = None
         self._tools.clear()
 
@@ -161,6 +171,7 @@ class MCPClient:
         """Read JSON-RPC responses from stdout, resolving pending futures."""
         assert self._process and self._process.stdout
         try:
+            non_header_lines = 0
             while True:
                 # Read headers until blank line.
                 content_length = 0
@@ -173,7 +184,12 @@ class MCPClient:
                         break  # end of headers
                     if line_s.lower().startswith("content-length:"):
                         content_length = int(line_s.split(":", 1)[1].strip())
-
+                        non_header_lines = 0
+                    else:
+                        non_header_lines += 1
+                        if non_header_lines > 100:
+                            return  # Safety break for malformed stdio
+                            
                 if content_length <= 0:
                     continue
                 body = await self._process.stdout.readexactly(content_length)
@@ -193,6 +209,12 @@ class MCPClient:
                     else:
                         future.set_result(msg.get("result", {}))
         except asyncio.CancelledError:
-            return
+            pass
         except Exception:
-            return  # reader dies silently; disconnect will clean up
+            pass  # reader dies silently; disconnect will clean up
+        finally:
+            self._connected = False
+            for fut in self._pending.values():
+                if not fut.done():
+                    fut.set_exception(RuntimeError("MCP disconnected"))
+            self._pending.clear()

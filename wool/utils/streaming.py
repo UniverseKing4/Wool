@@ -48,8 +48,21 @@ class StreamPrinter:
         line = line.rstrip("\r")
         
         if not self._render_md or not sys.stdout.isatty():
-            # If not rendering markdown, still respect the limit outside of code blocks
-            if not self._in_code_block and not line.strip():
+            from wool.utils.markdown import _FENCE_RE
+            is_fence = False
+            cm = _FENCE_RE.match(line)
+            
+            if self._in_code_block:
+                fence = getattr(self, '_fence_char', '```')
+                if line.strip().startswith(fence):
+                    self._in_code_block = False
+                    is_fence = True
+            elif cm:
+                self._in_code_block = True
+                self._fence_char = cm.group(2)[:3]
+                is_fence = True
+            
+            if not self._in_code_block and not line.strip() and not is_fence:
                 if self._has_text and self._empty_lines < 1:
                     sys.stdout.write("\r\n")
                 if self._has_text:
@@ -72,7 +85,8 @@ class StreamPrinter:
         )
         
         if self._in_code_block:
-            if line.strip().startswith("```"):
+            fence = getattr(self, '_fence_char', '```')
+            if line.strip().startswith(fence):
                 self._in_code_block = False
                 sys.stdout.write(self._apply_style(f"  {_a(_DIM)}└{'─' * 44}┘{_a(_RST)}") + "\r\n")
             else:
@@ -100,6 +114,7 @@ class StreamPrinter:
             self._in_code_block = True
             lang = cm.group(3).strip()
             self._code_lang = lang
+            self._fence_char = cm.group(2)[:3]
             if lang:
                 sys.stdout.write(self._apply_style(f"  {_a(_DIM)}┌─ {lang} ─{'─' * max(0, 40 - len(lang))}┐{_a(_RST)}") + "\r\n")
             else:

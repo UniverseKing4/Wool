@@ -173,7 +173,21 @@ class SlashCommandHandler:
             self.agent.config.save()
             success(f"Switched to provider '{name}'.")
         else:
-            ansi_error("Unknown sub-command.  Try: list, add, remove, switch")
+            # Treat as direct provider switch
+            p = self.agent.provider_registry.get(sub)
+            if not p:
+                ansi_error(f"Provider '{sub}' not found. Try: list, add, remove, switch")
+                return False
+            self.agent.active_provider = p
+            self.agent.config.active_provider = sub
+            
+            p_config = self.agent.config.providers.get(sub)
+            if p_config and p_config.default_model:
+                self.agent.active_model = p_config.default_model
+                self.agent.config.active_model = p_config.default_model
+                
+            self.agent.config.save()
+            success(f"Switched to provider '{sub}'.")
 
         return False
 
@@ -322,8 +336,34 @@ class SlashCommandHandler:
                 if action == "delete":
                     name = selected_name
                     
-                    if name == "default" and len(session_list) == 1:
-                        ansi_error("Cannot delete 'default' because it's the only session left. Use /clear to wipe history.")
+                    if name == "default":
+                        is_active = (name == self.agent.config.active_session)
+                        path = self.agent.get_session_path(name)
+                        already_cleared = False
+                        
+                        if is_active:
+                            already_cleared = (len(self.agent.messages) == 0)
+                        else:
+                            if path.exists():
+                                try:
+                                    import json
+                                    data = json.loads(path.read_text(encoding="utf-8"))
+                                    already_cleared = (len(data.get("messages", [])) == 0)
+                                except Exception:
+                                    already_cleared = True
+                            else:
+                                already_cleared = True
+                                
+                        if already_cleared:
+                            info("Session 'default' is already completely cleared.")
+                        else:
+                            if is_active:
+                                self.agent.clear_history()
+                            else:
+                                if path.exists():
+                                    path.write_text('{"messages": [], "total_usage": {}}\n', encoding="utf-8")
+                            success("Session 'default' history cleared.")
+                            
                         last_idx = menu_idx
                         continue
                         
@@ -461,15 +501,9 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
     # ── /usage ────────────────────────────────────────────────────────────
 
     async def _usage(self, _args: str) -> bool:
-        prompt = 0
-        completion = 0
-        
-        for msg in self.agent.messages:
-            if msg.role == "assistant" and getattr(msg, "usage", None):
-                prompt += msg.usage.get("prompt_tokens", 0)
-                completion += msg.usage.get("completion_tokens", 0)
-                
-        total = prompt + completion
+        prompt = self.agent.total_usage.get("prompt_tokens", 0)
+        completion = self.agent.total_usage.get("completion_tokens", 0)
+        total = self.agent.total_usage.get("total_tokens", prompt + completion)
         
         current_ctx = 0
         for msg in reversed(self.agent.messages):
@@ -567,13 +601,74 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
 
     async def _compact(self, _args: str) -> bool:
         msgs = self.agent.messages
-        if len(msgs) <= 5:
-            info("History is already compact.")
-            return False
         system = [m for m in msgs if m.role == "system"]
-        recent = [m for m in msgs if m.role != "system"][-4:]
-        self.agent.messages = system + recent
-        success(f"Compacted to {len([m for m in self.agent.messages if m.role != 'system'])} messages.")
+        others = [m for m in msgs if m.role != "system"]
+        
+        def is_real_user(m):
+            if m.role != "user": return False
+            if not m.content: return True
+            if "Tool execution complete. Please continue" in m.content: return False
+            if "The background subagents have finished. Here are their final results:" in m.content: return False
+            return True
+            
+        # Find real user message indices
+        user_msg_indices = [i for i, m in enumerate(others) if is_real_user(m)]
+        if not user_msg_indices:
+            info("No user messages to compact.")
+            return False
+            
+        start_idx = user_msg_indices[-1]
+        last_user_msg = others[start_idx]
+        
+        # Find the final assistant response text
+        last_assistant_msg = None
+        for m in reversed(others[start_idx:]):
+            if m.role == "assistant" and m.content:
+                last_assistant_msg = m
+                break
+                
+        from wool.providers.base import ChatMessage
+        recent = [last_user_msg]
+        if last_assistant_msg:
+            # Strip tool calls to make it a pure text response
+            clean_ast = ChatMessage(role="assistant", content=last_assistant_msg.content)
+            recent.append(clean_ast)
+            
+        # Everything else (older messages, tool calls, tool results) goes into the summary
+        older_messages = [m for m in others if m is not last_user_msg and m is not last_assistant_msg]
+        
+        if not older_messages:
+            info("History is already perfectly compact.")
+            return False
+        
+        info("Summarizing older messages...")
+        import json
+        summary_prompt = "Please summarize the following conversation concisely:\n\n"
+        for m in older_messages:
+            summary_prompt += json.dumps(m.to_dict(), indent=2, ensure_ascii=False) + "\n\n"
+            
+        from wool.providers.base import ChatMessage
+        temp_msgs = system + [ChatMessage(role="user", content=summary_prompt)]
+        
+        try:
+            summary_text = ""
+            async for ev in self.agent.active_provider.chat_completion_stream(temp_msgs, self.agent.active_model):
+                if ev.type == "text":
+                    summary_text += ev.content
+                    
+            summary_msg = ChatMessage(
+                role="system",
+                content=f"Summary of previous conversation:\n{summary_text.strip()}"
+            )
+            
+            from wool.utils.markdown import render_markdown
+            print(f"\n{bold(magenta('Compact Summary:'))}\n{render_markdown(summary_text.strip())}\n")
+            
+            self.agent.messages = system + [summary_msg] + recent
+            success(f"Compacted to {len(recent)} messages and 1 summary.")
+        except Exception as e:
+            ansi_error(f"Failed to summarize: {e}")
+            
         return False
 
     # ── /status ───────────────────────────────────────────────────────────
@@ -605,6 +700,10 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         user_msgs = []
         for i, m in enumerate(self.agent.messages):
             if m.role == "user" and m.content:
+                if "Tool execution complete. Please continue" in m.content:
+                    continue
+                if "The background subagents have finished. Here are their final results:" in m.content:
+                    continue
                 # Replace newlines with spaces and truncate for display
                 snippet = " ".join(m.content.split())
                 if len(snippet) > 60:

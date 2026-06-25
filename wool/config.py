@@ -71,10 +71,12 @@ class WoolConfig:
             "active_model": self.active_model,
             "active_session": self.active_session,
         }
-        CONFIG_FILE.write_text(
+        temp_path = CONFIG_FILE.with_suffix(".tmp")
+        temp_path.write_text(
             json.dumps(data, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
+        temp_path.replace(CONFIG_FILE)
 
     # ── helpers ───────────────────────────────────────────────────────────
 

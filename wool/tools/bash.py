@@ -88,7 +88,10 @@ class ExecuteBash(Tool):
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
                 except (ProcessLookupError, PermissionError):
-                    proc.kill()
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
                 await proc.wait()
                 return ToolResult(
                     success=False,

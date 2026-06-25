@@ -15,7 +15,6 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
     if not sessions:
         return None
 
-    # Determine initial selected index
     if 0 <= initial_idx < len(sessions):
         selected_idx = initial_idx
     else:
@@ -29,19 +28,16 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
 
-    def _render() -> None:
-        # Move cursor up to overwrite previous lines if we've already printed
-        # But for the very first render, we don't move up.
-        # We will handle cursor movement in the loop.
-        pass
-
-    # Print the header once
     print(f"\n  {bold(cyan('Sessions:'))}")
     
-    # We will print the list, then we will keep moving cursor up and reprinting.
-    num_lines = len(sessions) + 3  # list + 1 blank line + 2 prompt lines
+    try:
+        import shutil
+        term_lines = shutil.get_terminal_size().lines
+    except Exception:
+        term_lines = 24
+    max_display = max(5, term_lines - 8)
 
-    def _render() -> None:
+    def _render(offset: int, sel: int) -> list[str]:
         try:
             import shutil
             term_width = shutil.get_terminal_size().columns
@@ -51,21 +47,23 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
         max_name_len = max(10, term_width - 12)
         
         lines = []
-        for i, name in enumerate(sessions):
+        visible = sessions[offset:offset+max_display]
+        for i, name in enumerate(visible):
+            actual_idx = offset + i
             display_name = name if len(name) <= max_name_len else name[:max_name_len-3] + "..."
             
-            prefix = "❯" if i == selected_idx else " "
+            prefix = "❯" if actual_idx == sel else " "
             if name == active_session:
                 icon = green("●")
-                colored_name = cyan(display_name) if i != delete_confirm_idx else red(display_name)
+                colored_name = cyan(display_name) if actual_idx != delete_confirm_idx else red(display_name)
             else:
                 icon = dim("○")
-                colored_name = white(display_name) if i != delete_confirm_idx else red(display_name)
+                colored_name = white(display_name) if actual_idx != delete_confirm_idx else red(display_name)
                 
-            if i == selected_idx:
+            if actual_idx == sel:
                 colored_name = bold(colored_name)
                 
-            color_prefix = cyan(prefix) if i == selected_idx else prefix
+            color_prefix = cyan(prefix) if actual_idx == sel else prefix
             lines.append(f"  {color_prefix} {icon} {colored_name}")
             
         lines.append("")
@@ -75,15 +73,23 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
         else:
             lines.append(f"  {dim('↑/↓: move   Enter: switch')}")
             lines.append(f"  {dim('d: delete   q/Esc: cancel')}")
-        
-        # In raw mode, we must use \r\n
+        return lines
+
+    # Make sure offset keeps the selected item in view
+    offset = max(0, min(selected_idx - max_display // 2, len(sessions) - max_display))
+    if selected_idx < offset:
+        offset = selected_idx
+
+    def _draw():
+        lines = _render(offset, selected_idx)
         for line in lines:
             sys.stdout.write(f"\r\033[K{line}\r\n")
         sys.stdout.flush()
+        return len(lines)
 
     try:
         tty.setraw(sys.stdin.fileno())
-        _render()
+        num_lines = _draw()
         
         while True:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
@@ -109,9 +115,17 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
                     seq = os.read(fd, 2).decode("utf-8", errors="ignore")
                     if seq in ('[A', 'OA'):  # Up
                         selected_idx = (selected_idx - 1) % len(sessions)
+                        if selected_idx < offset:
+                            offset = selected_idx
+                        elif selected_idx >= offset + max_display:
+                            offset = selected_idx - max_display + 1
                         delete_confirm_idx = -1
                     elif seq in ('[B', 'OB'):  # Down
                         selected_idx = (selected_idx + 1) % len(sessions)
+                        if selected_idx >= offset + max_display:
+                            offset = selected_idx - max_display + 1
+                        elif selected_idx < offset:
+                            offset = selected_idx
                         delete_confirm_idx = -1
                 else:
                     sys.stdout.write(f"\r\033[K\r\n")
@@ -122,7 +136,7 @@ def run_session_menu(sessions: list[str], active_session: str, initial_idx: int 
 
             # Move cursor back up
             sys.stdout.write(f"\r\033[{num_lines}A")
-            _render()
+            num_lines = _draw()
 
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
@@ -147,14 +161,24 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
     # Actually, let's just show all of them or up to 15.
     max_display = 15
     
+    try:
+        import shutil
+        term_width = shutil.get_terminal_size().columns
+    except Exception:
+        term_width = 80
+        
     def _render(offset: int, sel: int) -> list[str]:
+        max_len = max(10, term_width - 6)
         lines = []
         visible = messages[offset:offset+max_display]
         for i, (msg_idx, snippet) in enumerate(visible):
             actual_idx = offset + i
             prefix = "❯" if actual_idx == sel else " "
             
-            colored = cyan(snippet) if actual_idx == sel else white(snippet)
+            # Truncate strictly to terminal width to prevent line wrapping which breaks stdout cursor up logic.
+            display_snippet = snippet if len(snippet) <= max_len else snippet[:max_len-3] + "..."
+            
+            colored = cyan(display_snippet) if actual_idx == sel else white(display_snippet)
             if actual_idx == sel:
                 colored = bold(colored)
                 

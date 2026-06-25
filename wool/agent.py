@@ -88,7 +88,8 @@ class WoolAgent:
             self.active_provider = self.provider_registry.get(
                 self.config.active_provider,
             )
-        elif self.config.providers:
+            
+        if not self.active_provider and self.config.providers:
             first_name = next(iter(self.config.providers))
             self.active_provider = self.provider_registry.get(first_name)
             
@@ -315,23 +316,28 @@ class WoolAgent:
 
             # 2. Wait for them as they complete and print results in separate boxes!
             completed_results: dict[str, str] = {}
-            for completed_task in asyncio.as_completed(tasks.values()):
-                tc, args, result_text = await completed_task
+            try:
+                for completed_task in asyncio.as_completed(tasks.values()):
+                    tc, args, result_text = await completed_task
 
-                # Cap result length to avoid excessive memory usage.
-                if len(result_text) > 30_000:
-                    result_text = result_text[:30_000] + "\n… (truncated)"
-                
-                completed_results[tc.id] = result_text
+                    # Cap result length to avoid excessive memory usage.
+                    if len(result_text) > 30_000:
+                        result_text = result_text[:30_000] + "\n… (truncated)"
+                    
+                    completed_results[tc.id] = result_text
 
-                # Show immersive full output with ANSI borders for the result
-                output_lines = result_text.splitlines()
-                num_lines = len(output_lines)
-                
-                yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n"
-                for line in output_lines:
-                    yield "tool", f"  {dim('│')} {dim(line)}\r\n"
-                yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+                    # Show immersive full output with ANSI borders for the result
+                    output_lines = result_text.splitlines()
+                    num_lines = len(output_lines)
+                    
+                    yield "tool", f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n"
+                    for line in output_lines:
+                        yield "tool", f"  {dim('│')} {dim(line)}\r\n"
+                    yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+            finally:
+                for t in tasks.values():
+                    if not t.done():
+                        t.cancel()
 
             # 3. Merge expanded tool results back into original tool call IDs
             for original_tc in original_pending_tool_calls:
@@ -376,24 +382,39 @@ class WoolAgent:
         path = self.get_session_path()
         if not path.exists():
             self.messages = []
+            self.total_usage = {}
             return
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             self.messages = [ChatMessage.from_dict(m) for m in data.get("messages", [])]
+            self.total_usage = data.get("total_usage", {})
         except Exception:
             self.messages = []
+            self.total_usage = {}
 
     def save_session(self) -> None:
         path = self.get_session_path()
-        data = {"messages": [m.to_dict() for m in self.messages]}
-        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        data = {
+            "messages": [m.to_dict() for m in self.messages],
+            "total_usage": self.total_usage
+        }
+        
+        temp_path = path.with_suffix(".tmp")
+        temp_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temp_path.replace(path)
 
     def clear_history(self) -> None:
         self.messages.clear()
-        self.total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        self.total_usage = {}
         self.save_session()
 
     async def shutdown(self) -> None:
         self.save_session()
+        if hasattr(self, "_active_bg_tasks"):
+            for t in self._active_bg_tasks:
+                if not t.done():
+                    t.cancel()
+            await asyncio.gather(*self._active_bg_tasks, return_exceptions=True)
+            self._active_bg_tasks.clear()
         await self.provider_registry.close_all()
         await self.mcp_manager.disconnect_all()

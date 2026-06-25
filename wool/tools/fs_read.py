@@ -75,11 +75,11 @@ class FileSystemRead(Tool):
         if mode == "file":
             return await self._read_file(p, kwargs)
         if mode == "directory":
-            return self._list_directory(p)
+            return await asyncio.to_thread(self._list_directory, p)
         if mode == "search":
             return await self._search(p, kwargs)
         if mode == "image":
-            return self._image_info(p)
+            return await asyncio.to_thread(self._image_info, p)
         return ToolResult(success=False, output="", error=f"Unknown mode: {mode}")
 
     # ── file ──────────────────────────────────────────────────────────────
@@ -92,28 +92,31 @@ class FileSystemRead(Tool):
         if not os.access(p, os.R_OK):
             return ToolResult(success=False, output="", error=f"Permission denied: {p}")
 
+        start = max(int(kw.get("start_line") or 1), 1)
+        end = int(kw.get("end_line") or (start + MAX_FILE_LINES - 1))
+        end = max(start, end)
+        
+        selected: list[str] = []
+        total_lines = 0
+        truncated = False
+
         try:
             async with aiofiles.open(p, "r", encoding="utf-8", errors="replace") as f:
-                lines = await f.readlines()
+                async for line in f:
+                    total_lines += 1
+                    if start <= total_lines <= end:
+                        if len(selected) >= MAX_FILE_LINES:
+                            truncated = True
+                            continue
+                        selected.append(line)
         except Exception as exc:
             return ToolResult(success=False, output="", error=str(exc))
-
-        start = max(int(kw.get("start_line") or 1), 1)
-        end = int(kw.get("end_line") or len(lines))
-        end = min(end, len(lines))
-
-        selected = lines[start - 1 : end]
-        if len(selected) > MAX_FILE_LINES:
-            selected = selected[:MAX_FILE_LINES]
-            truncated = True
-        else:
-            truncated = False
 
         numbered = [f"{start + i:>6} │ {l.rstrip()}" for i, l in enumerate(selected)]
         text = "\n".join(numbered)
         if truncated:
             text += f"\n... (truncated at {MAX_FILE_LINES} lines)"
-        meta = {"total_lines": len(lines), "shown": f"{start}-{start + len(selected) - 1}"}
+        meta = {"total_lines": total_lines, "shown": f"{start}-{start + len(selected) - 1}"}
         return ToolResult(success=True, output=text, metadata=meta)
 
     # ── directory ─────────────────────────────────────────────────────────
