@@ -51,6 +51,7 @@ class SlashCommandHandler:
             "/usage": self._usage,
             "/clear": self._clear,
             "/status": self._status,
+            "/copy": self._copy,
             "/exit": self._exit,
             "/quit": self._exit,
             "/compact": self._compact,
@@ -82,6 +83,7 @@ class SlashCommandHandler:
             ("/clear", "Clear conversation history"),
             ("/compact", "Compact history (keep system + last 4 turns)"),
             ("/status", "Show current session status"),
+            ("/copy", "Copy the last AI response to clipboard"),
             ("/exit, /quit", "Exit Wool"),
         ]
         for name, desc in cmds:
@@ -431,6 +433,25 @@ class SlashCommandHandler:
         print(f"  {dim('MCP:')}       {white(str(mcp_n))} {dim('servers')}")
         print(f"  {dim('History:')}   {white(str(msgs))} {dim('messages')}")
         print()
+        return False
+
+    # ── /copy ─────────────────────────────────────────────────────────────
+
+    async def _copy(self, _args: str) -> bool:
+        import pyperclip
+        from pyperclip import PyperclipException
+        
+        # Find the last message with role == "assistant"
+        for msg in reversed(self.agent.messages):
+            if msg.role == "assistant" and msg.content:
+                try:
+                    pyperclip.copy(msg.content)
+                    success("Copied the last AI response to clipboard.")
+                except PyperclipException as e:
+                    ansi_error(f"Clipboard error: {e}")
+                return False
+                
+        warning("No AI response found to copy.")
         return False
 
     # ── /exit ─────────────────────────────────────────────────────────────
