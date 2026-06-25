@@ -96,25 +96,36 @@ async def run_repl() -> None:
             
     readline.set_pre_input_hook(_pre_input_hook)
     readline.parse_and_bind("set disable-completion on")
+    from collections import deque
+    typeahead_buffer: deque[str] = deque()
 
+    auto_next_text = None
+    
     while True:
+        turn = sum(1 for m in agent.messages if m.role == "user") + 1
+        
         # ── read ──
-        old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
-        try:
-            turn = sum(1 for m in agent.messages if m.role == "user") + 1
-            user_input = input(_prompt(turn))
-        except KeyboardInterrupt:
-            print()
-            if readline.get_line_buffer():
-                continue
-            break
-        except EOFError:
-            print()
-            break
-        finally:
-            signal.signal(signal.SIGINT, old_handler)
-
-        text = user_input.strip()
+        if auto_next_text:
+            text = auto_next_text
+            auto_next_text = None
+            print(f"{_prompt(turn)}{text}")
+        else:
+            old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
+            try:
+                user_input = input(_prompt(turn))
+            except KeyboardInterrupt:
+                print()
+                if readline.get_line_buffer():
+                    continue
+                break
+            except EOFError:
+                print()
+                break
+            finally:
+                signal.signal(signal.SIGINT, old_handler)
+    
+            text = user_input.strip()
+            
         if not text:
             continue
 
@@ -300,6 +311,7 @@ async def run_repl() -> None:
             await spinner_task
             
             if user_cancelled:
+                auto_next_text = None
                 if not task.done():
                     task.cancel()
                     await task
@@ -307,6 +319,9 @@ async def run_repl() -> None:
                 print(f"\r\n{dim('  (cancelled via Escape)')}")
                 continue
             else:
+                if agent.messages and agent.messages[-1].role == "assistant" and agent.messages[-1].content:
+                    if "<CONTINUE>" in agent.messages[-1].content:
+                        auto_next_text = "<CONTINUE>"
                 await task  # raise any exceptions
                 
         except KeyboardInterrupt:

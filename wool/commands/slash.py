@@ -52,6 +52,7 @@ class SlashCommandHandler:
             "/mcp": self._mcp,
             "/usage": self._usage,
             "/context": self._context,
+            "/goal": self._goal,
             "/clear": self._clear,
             "/status": self._status,
             "/rewind": self._rewind,
@@ -85,6 +86,7 @@ class SlashCommandHandler:
             ("/rewind", "Interactively rewind history to a specific message"),
             ("/tools", "List available tools"),
             ("/mcp list|connect|disconnect", "Manage MCP servers"),
+            ("/goal <task>", "Set a goal and work autonomously until complete"),
             ("/usage", "View token usage for the current session"),
             ("/context", "View detailed token breakdown of current context"),
             ("/clear", "Clear conversation history"),
@@ -425,6 +427,35 @@ class SlashCommandHandler:
         self.agent.messages = msgs_copy
         self.agent.save_session()
         success(f"Forked conversation to new session '{new_name}'.")
+        return False
+
+    # ── /goal ─────────────────────────────────────────────────────────────
+
+    async def _goal(self, args: str) -> bool:
+        if not args.strip():
+            ansi_error("Usage: /goal <task description>")
+            return False
+            
+        prompt = f"""[GOAL MODE ACTIVATED]
+Your overarching goal is: {args.strip()}
+
+You must work autonomously to completely fulfill this goal. 
+If you need to execute tools, do so. 
+At the end of every response, you MUST evaluate if the goal is completely finished.
+If the goal is NOT finished, you MUST output the exact string `<CONTINUE>` at the very end of your response. This will trigger the system to automatically let you take another turn.
+If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
+"""
+        import readline
+        try:
+            def pre_input_hook():
+                readline.insert_text(prompt)
+                readline.redisplay()
+                readline.set_pre_input_hook(None)
+            readline.set_pre_input_hook(pre_input_hook)
+        except ImportError:
+            pass
+            
+        success(f"Goal mode primed! Press Enter to start: '{args.strip()}'")
         return False
 
     # ── /usage ────────────────────────────────────────────────────────────
