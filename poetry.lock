@@ -402,6 +402,17 @@ files = [
 ]
 
 [[package]]
+name = "termux-api"
+version = "1.2.5.3"
+description = "A package for accessing termux-api"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "termux_api-1.2.5.3-py3-none-any.whl", hash = "sha256:830378b3e9951471420194be477da4b576d8167588d674660309ddc28e2b3e5a"},
+]
+
+[[package]]
 name = "types-aiofiles"
 version = "25.1.0.20260518"
 description = "Typing stubs for aiofiles"
@@ -441,4 +452,4 @@ markers = {main = "python_version < \"3.13\""}
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "8502890f66859d129fdf45b18bc73bcd10d821b177b80dd6245850af1fc70245"
+content-hash = "a855abde5490cd52813894a28c2208ef3b66ce89c3d3ecbe153c7f5c4c487060"

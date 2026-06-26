@@ -909,7 +909,20 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         except Exception:
             pass
 
-        # 2. Try Pyperclip as fallback for local desktop users
+        # 2. Try Termux native clipboard (if on Android Termux)
+        import shutil
+        import subprocess
+        
+        if shutil.which("termux-clipboard-set"):
+            try:
+                proc = subprocess.Popen(["termux-clipboard-set"], stdin=subprocess.PIPE)
+                proc.communicate(input=last_msg.encode("utf-8"))
+                success("Copied the last AI response to clipboard.")
+                return False
+            except Exception:
+                pass
+
+        # 3. Try Pyperclip as fallback for local desktop users
         try:
             import pyperclip
 
