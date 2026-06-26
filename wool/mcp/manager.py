@@ -19,12 +19,13 @@ class MCPManager:
         command: list[str] | None = None,
         url: str | None = None,
         env: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         """Connect (or reconnect) to an MCP server."""
         if name in self._clients:
             await self._clients[name].disconnect()
 
-        client = MCPClient(name=name, command=command, url=url, env=env)
+        client = MCPClient(name=name, command=command, url=url, env=env, headers=headers)
         await client.connect()
         # Eagerly fetch tool list so they're available immediately.
         await client.list_tools()

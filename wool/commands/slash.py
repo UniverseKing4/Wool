@@ -316,19 +316,32 @@ class SlashCommandHandler:
                 print()
 
         elif sub == "connect":
-            if len(parts) < 2:
+            if len(parts) < 3:
                 ansi_error("Usage: /mcp connect <name> <command...>")
+                ansi_error("   OR: /mcp connect <name> http <url>")
                 ansi_error("  e.g. /mcp connect myserver npx -y @my/mcp-server")
+                ansi_error("  e.g. /mcp connect web http https://mcp.exa.ai/mcp")
                 return False
             name = parts[1]
-            command = parts[2:] if len(parts) > 2 else None
-            if not command:
-                ansi_error("Provide the command to launch the MCP server.")
+            
+            command = None
+            url = None
+            if parts[2] == "http" and len(parts) > 3:
+                url = parts[3]
+            else:
+                command = parts[2:]
+            
+            if not command and not url:
+                ansi_error("Provide the command or http url to launch the MCP server.")
                 return False
+                
             info(f"Connecting to MCP server '{name}'...")
             try:
-                await self.agent.mcp_manager.connect(name, command=command)
-                self.agent.config.mcp_servers[name] = {"command": command}
+                await self.agent.mcp_manager.connect(name, command=command, url=url)
+                if command:
+                    self.agent.config.mcp_servers[name] = {"command": command}
+                else:
+                    self.agent.config.mcp_servers[name] = {"type": "http", "url": url}
                 self.agent.config.save()
                 tools = self.agent.mcp_manager._clients[name].tools
                 success(f"Connected to '{name}' — {len(tools)} tools available.")
