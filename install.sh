@@ -112,26 +112,28 @@ fi
 # 5. Download & Install Wool
 echo -e "${BLUE}ℹ Downloading and installing Wool...${NC}"
 
-# We will use pipx if available, otherwise pip --user.
-if ! command_exists pipx; then
-    echo -e "${BLUE}ℹ Setting up isolated installation (pipx)...${NC}"
-    if [ "$PM" = "pkg" ]; then
-        python3 -m pip install --upgrade pip
-        python3 -m pip install pipx
-    else
-        python3 -m pip install --user --upgrade pipx || python3 -m pip install --user --break-system-packages pipx || true
-    fi
-fi
-
-export PATH="$PATH:$HOME/.local/bin"
-
-if command_exists pipx; then
-    pipx ensurepath >/dev/null 2>&1 || true
-    pipx install --force "git+https://github.com/UniverseKing4/Wool.git"
+if [ "$IS_TERMUX" = true ]; then
+    # Termux forbids pip install --upgrade pip and pipx is unnecessary.
+    # Use pip directly — Termux doesn't enforce --user or --break-system-packages.
+    pip install --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
 else
-    echo -e "${YELLOW}ℹ pipx not found, falling back to pip install --user...${NC}"
-    python3 -m pip install --user --upgrade --force-reinstall --break-system-packages "git+https://github.com/UniverseKing4/Wool.git" || \
-    python3 -m pip install --user --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
+    # On standard Linux, prefer pipx for isolated installs.
+    if ! command_exists pipx; then
+        echo -e "${BLUE}ℹ Setting up isolated installation (pipx)...${NC}"
+        python3 -m pip install --user --upgrade pipx 2>/dev/null || \
+        python3 -m pip install --user --break-system-packages pipx 2>/dev/null || true
+    fi
+
+    export PATH="$PATH:$HOME/.local/bin"
+
+    if command_exists pipx; then
+        pipx ensurepath >/dev/null 2>&1 || true
+        pipx install --force "git+https://github.com/UniverseKing4/Wool.git"
+    else
+        echo -e "${YELLOW}ℹ pipx not available, using pip install --user...${NC}"
+        python3 -m pip install --user --upgrade --force-reinstall --break-system-packages "git+https://github.com/UniverseKing4/Wool.git" 2>/dev/null || \
+        python3 -m pip install --user --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
+    fi
 fi
 
 # Detect the user's ACTUAL login shell (not the script runner)
