@@ -90,13 +90,35 @@ def _prompt(turn: int) -> str:
 async def run_repl(resume: bool = False) -> None:
     """Main read-eval-print loop."""
     config = WoolConfig.load()
+
+    # If it's a fresh start, generate a new session ID
+    if not resume:
+        # Save the current active session as the last_session so /resume can go back to it
+        if config.active_session:
+            config.last_session = config.active_session
+
+        # Generate a new timestamped session ID
+        config.active_session = f"session_{int(time.time())}"
+        config.save()
+    elif not config.active_session:
+        # Fallback if someone used -c on the very first run ever
+        config.active_session = f"session_{int(time.time())}"
+        config.save()
+
     agent = WoolAgent(config)
     commands = SlashCommandHandler(agent)
 
-    # By default, start a fresh session unless -c / -r flag was passed.
-    if not resume:
-        agent.messages.clear()
-        agent.total_usage = {}
+    if resume:
+        # We are resuming. Let the user know if we loaded previous messages.
+        n_user = sum(1 for m in agent.messages if m.role == "user")
+        n_asst = sum(1 for m in agent.messages if m.role == "assistant")
+        if n_user > 0 or n_asst > 0:
+            from wool.utils.ansi import success
+
+            print()
+            success(
+                f"Resumed session '{config.active_session}' — {n_user} user + {n_asst} assistant messages loaded."
+            )
 
     if config.mcp_servers:
         from wool.utils.ansi import red, info, success

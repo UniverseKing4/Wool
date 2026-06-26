@@ -33,7 +33,8 @@ class WoolConfig:
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
     active_provider: str | None = None
     active_model: str | None = None
-    active_session: str = "default"
+    active_session: str | None = None
+    last_session: str | None = None
     mcp_servers: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # ── persistence ───────────────────────────────────────────────────────
@@ -60,7 +61,8 @@ class WoolConfig:
             providers=providers,
             active_provider=raw.get("active_provider"),
             active_model=raw.get("active_model"),
-            active_session=raw.get("active_session", "default"),
+            active_session=raw.get("active_session"),
+            last_session=raw.get("last_session"),
             mcp_servers=raw.get("mcp_servers", {}),
         )
 
@@ -72,6 +74,7 @@ class WoolConfig:
             "active_provider": self.active_provider,
             "active_model": self.active_model,
             "active_session": self.active_session,
+            "last_session": self.last_session,
             "mcp_servers": self.mcp_servers,
         }
         temp_path = CONFIG_FILE.with_suffix(".tmp")
