@@ -417,12 +417,13 @@ class SlashCommandHandler:
                 action, selected_name, menu_idx = result
                 if action == "delete":
                     name = selected_name
+                    is_only_session = len(session_list) == 1
+                    is_active = name == self.agent.config.active_session
+                    path = self.agent.get_session_path(name)
 
-                    if name == "default":
-                        is_active = name == self.agent.config.active_session
-                        path = self.agent.get_session_path(name)
+                    if is_only_session:
+                        # Don't delete the last session entirely, just clear its history
                         already_cleared = False
-
                         if is_active:
                             already_cleared = len(self.agent.messages) == 0
                         else:
@@ -438,7 +439,7 @@ class SlashCommandHandler:
                                 already_cleared = True
 
                         if already_cleared:
-                            info("Session 'default' is already completely cleared.")
+                            info(f"Session '{name}' is already completely cleared.")
                         else:
                             if is_active:
                                 self.agent.clear_history()
@@ -448,28 +449,29 @@ class SlashCommandHandler:
                                         '{"messages": [], "total_usage": {}}\n',
                                         encoding="utf-8",
                                     )
-                            success("Session 'default' history cleared.")
+                            success(
+                                f"Session '{name}' history cleared (cannot delete the last remaining session)."
+                            )
 
                         last_idx = menu_idx
                         continue
 
-                    path = self.agent.get_session_path(name)
+                    # Otherwise, it's not the only session, so we can delete it
                     if path.exists():
                         path.unlink()
-                        success(f"Session '{name}' deleted.")
-                    else:
-                        ansi_error(f"Session '{name}' not found.")
-                        last_idx = menu_idx
-                        continue
 
-                    if name == self.agent.config.active_session:
-                        if name != "default":
-                            self.agent.config.active_session = "default"
-                            self.agent.config.save()
-                            self.agent.load_session()
-                            success("Switched to session 'default'.")
-                        else:
-                            self.agent.clear_history()
+                    if is_active:
+                        # We deleted the active session. Pick another one to switch to.
+                        other_sessions = [s for s in session_list if s != name]
+                        new_active = other_sessions[0]
+                        self.agent.config.active_session = new_active
+                        self.agent.config.save()
+                        self.agent.load_session()
+                        success(
+                            f"Session '{name}' deleted. Switched to '{new_active}'."
+                        )
+                    else:
+                        success(f"Session '{name}' deleted.")
 
                     # Update index to stay in place. Since the element is deleted,
                     # the next item shifts into menu_idx. If we deleted the last item,
