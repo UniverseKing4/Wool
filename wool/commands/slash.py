@@ -56,6 +56,8 @@ class SlashCommandHandler:
             "/new": self._new,
             "/rename": self._rename,
             "/fork": self._fork,
+            "/resume": self._resume,
+            "/continue": self._resume,
             "/tools": self._tools,
             "/mcp": self._mcp,
             "/mcps": self._mcp,
@@ -92,6 +94,7 @@ class SlashCommandHandler:
             ("/new [name]", "Create and switch to a new session"),
             ("/rename <new_name>", "Rename the current session"),
             ("/fork [name]", "Fork current conversation to a new session"),
+            ("/resume, /continue", "Resume the last previous session"),
             ("/rewind", "Interactively rewind history to a specific message"),
             ("/tools", "List available tools"),
             ("/mcp(s) list|connect|disconnect", "Manage MCP servers"),
@@ -553,6 +556,22 @@ class SlashCommandHandler:
         self.agent.messages = msgs_copy
         self.agent.save_session()
         success(f"Forked conversation to new session '{new_name}'.")
+        return False
+
+    # ── /resume, /continue ────────────────────────────────────────────────
+
+    async def _resume(self, _args: str) -> bool:
+        self.agent.load_session()
+        n = len(self.agent.messages)
+        if n == 0:
+            info("No previous conversation found in this session.")
+        else:
+            n_user = sum(1 for m in self.agent.messages if m.role == "user")
+            n_asst = sum(1 for m in self.agent.messages if m.role == "assistant")
+            success(
+                f"Resumed session '{self.agent.config.active_session}' "
+                f"— {n_user} user + {n_asst} assistant messages loaded."
+            )
         return False
 
     # ── /goal ─────────────────────────────────────────────────────────────

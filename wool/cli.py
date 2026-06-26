@@ -87,11 +87,15 @@ def _prompt(turn: int) -> str:
 # ── REPL ──────────────────────────────────────────────────────────────────────
 
 
-async def run_repl() -> None:
+async def run_repl(resume: bool = False) -> None:
     """Main read-eval-print loop."""
     config = WoolConfig.load()
     agent = WoolAgent(config)
     commands = SlashCommandHandler(agent)
+
+    # By default, start a fresh session unless -c / -r flag was passed.
+    if not resume:
+        agent.clear_history()
 
     if config.mcp_servers:
         from wool.utils.ansi import red, info, success
