@@ -49,6 +49,7 @@ class SlashCommandHandler:
         dispatch: dict[str, Callable[..., Coroutine[Any, Any, bool]]] = {
             "/help": self._help,
             "/provider": self._provider,
+            "/providers": self._provider,
             "/model": self._model,
             "/models": self._models,
             "/session": self._session,
@@ -87,7 +88,7 @@ class SlashCommandHandler:
         print()
         cmds = [
             ("/help", "Show this help message"),
-            ("/provider list|add|remove|switch", "Manage AI providers"),
+            ("/provider(s) list|add|remove|switch", "Manage AI providers"),
             ("/model [list|switch <id>]", "View or change the active model"),
             ("/models", "List available models for the active provider"),
             ("/session(s)", "Open interactive session menu"),
