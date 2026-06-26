@@ -95,7 +95,8 @@ async def run_repl(resume: bool = False) -> None:
 
     # By default, start a fresh session unless -c / -r flag was passed.
     if not resume:
-        agent.clear_history()
+        agent.messages.clear()
+        agent.total_usage = {}
 
     if config.mcp_servers:
         from wool.utils.ansi import red, info, success

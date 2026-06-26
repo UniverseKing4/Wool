@@ -473,6 +473,13 @@ class WoolAgent:
             self.total_usage = {}
 
     def save_session(self) -> None:
+        if not self.messages and not getattr(
+            self, "_history_cleared_explicitly", False
+        ):
+            # Don't wipe out the session on disk if we just started a fresh session
+            # and haven't done anything yet.
+            return
+
         path = self.get_session_path()
         data = {
             "messages": [m.to_dict() for m in self.messages],
@@ -488,6 +495,7 @@ class WoolAgent:
     def clear_history(self) -> None:
         self.messages.clear()
         self.total_usage = {}
+        self._history_cleared_explicitly = True
         self.save_session()
 
     async def shutdown(self) -> None:
