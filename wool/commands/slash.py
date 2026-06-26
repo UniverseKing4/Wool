@@ -94,7 +94,7 @@ class SlashCommandHandler:
             ("/fork [name]", "Fork current conversation to a new session"),
             ("/rewind", "Interactively rewind history to a specific message"),
             ("/tools", "List available tools"),
-            ("/mcp list|connect|disconnect", "Manage MCP servers"),
+            ("/mcp(s) list|connect|disconnect", "Manage MCP servers"),
             ("/goal <task>", "Set a goal and work autonomously until complete"),
             ("/usage", "View token usage for the current session"),
             ("/context", "View detailed token breakdown of current context"),
