@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wool — Ultra-lightweight CLI AI Agent</title>
+    <meta name="description" content="Wool is an ultra-lightweight CLI AI agent. One command, infinite power. Works with any AI provider, 7 built-in tools, MCP support, sessions, and more.">
+    <meta property="og:title" content="Wool — Ultra-lightweight CLI AI Agent">
+    <meta property="og:description" content="Your terminal is the IDE. Wool is the brain. One-line install, works everywhere.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://universeking4.github.io/Wool/">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #06060b;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --bg-card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(100, 220, 255, 0.2);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --text-muted: #475569;
+            --accent: #22d3ee;
+            --accent2: #818cf8;
+            --accent3: #a78bfa;
+            --gradient: linear-gradient(135deg, #22d3ee, #818cf8, #a78bfa);
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* ── Nav ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(6, 6, 11, 0.7);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.9rem 2rem;
+        }
+        .nav-logo { font-weight: 800; font-size: 1.2rem; color: var(--text); text-decoration: none; }
+        .nav-logo span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--text-dim); text-decoration: none; font-size: 0.875rem;
+            font-weight: 500; transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-gh {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1.1rem; border-radius: 8px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            color: var(--text); text-decoration: none; font-size: 0.8rem; font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-gh:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
+        .nav-gh svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .hamburger { display: none; background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; }
+
+        /* ── Sections ── */
+        section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 800;
+            margin-bottom: 1rem; text-align: center;
+        }
+        .section-title span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-sub {
+            text-align: center; color: var(--text-dim); font-size: 1.05rem;
+            max-width: 600px; margin: 0 auto 3.5rem;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            padding-top: 5rem; position: relative;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -20%; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 800px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(34,211,238,0.08) 0%, rgba(129,140,248,0.04) 40%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 1rem; border-radius: 100px;
+            background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.15);
+            color: var(--accent); font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 2rem; letter-spacing: 0.03em;
+        }
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 900;
+            line-height: 1.05; margin-bottom: 1.2rem;
+        }
+        .hero h1 .gradient { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p {
+            font-size: clamp(1.1rem, 2.5vw, 1.35rem); color: var(--text-dim);
+            max-width: 550px; margin-bottom: 3rem;
+        }
+
+        /* ── Install Box ── */
+        .install-box {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem 1.5rem;
+            display: flex; align-items: center; gap: 1rem;
+            max-width: 700px; width: 100%; cursor: pointer;
+            transition: all 0.3s; position: relative;
+        }
+        .install-box:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+        .install-box code {
+            font-family: var(--mono); font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            color: var(--accent); flex: 1; white-space: nowrap; overflow-x: auto;
+        }
+        .install-box .dollar { color: var(--text-muted); margin-right: 0.3rem; }
+        .copy-btn {
+            background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);
+            color: var(--accent); padding: 0.5rem 1rem; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            font-family: var(--font); transition: all 0.2s; white-space: nowrap;
+        }
+        .copy-btn:hover { background: rgba(34,211,238,0.2); }
+        .copy-btn.copied { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.3); color: #22c55e; }
+
+        .hero-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 1.5rem; }
+        .hero-sub a { color: var(--accent); text-decoration: none; }
+        .hero-sub a:hover { text-decoration: underline; }
+
+        /* ── Terminal ── */
+        .terminal-section { padding-bottom: 2rem; }
+        .terminal {
+            max-width: 750px; margin: 0 auto; border-radius: 14px;
+            background: #0d0d14; border: 1px solid var(--border);
+            overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        }
+        .terminal-bar {
+            background: rgba(255,255,255,0.03); padding: 0.8rem 1rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-dot.r { background: #ff5f57; }
+        .terminal-dot.y { background: #ffbd2e; }
+        .terminal-dot.g { background: #28c840; }
+        .terminal-title { flex: 1; text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+        .terminal-body {
+            padding: 1.5rem; font-family: var(--mono); font-size: 0.82rem;
+            line-height: 1.8; color: var(--text-dim); overflow-x: auto;
+        }
+        .terminal-body .prompt { color: #22d3ee; font-weight: 700; }
+        .terminal-body .cmd { color: var(--text); }
+        .terminal-body .success { color: #22c55e; }
+        .terminal-body .info { color: #818cf8; }
+        .terminal-body .dim { color: #475569; }
+        .terminal-body .bold { color: var(--text); font-weight: 600; }
+
+        /* ── Feature Grid ── */
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 2rem;
+            transition: all 0.35s ease;
+        }
+        .feature-card:hover {
+            background: var(--bg-card-hover); border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(34,211,238,0.05);
+        }
+        .feature-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 1.2rem;
+            background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.1);
+        }
+        .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.6rem; }
+        .feature-card p { color: var(--text-dim); font-size: 0.9rem; line-height: 1.6; }
+
+        /* ── Tools Table ── */
+        .tools-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .tool-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.5rem;
+            display: flex; align-items: flex-start; gap: 1rem;
+            transition: all 0.3s;
+        }
+        .tool-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+        .tool-name {
+            font-family: var(--mono); font-size: 0.85rem; font-weight: 600;
+            color: var(--accent); white-space: nowrap;
+        }
+        .tool-desc { color: var(--text-dim); font-size: 0.85rem; }
+        .tool-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+        /* ── Commands ── */
+        .commands-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 0.75rem;
+        }
+        .cmd-row {
+            display: flex; align-items: baseline; gap: 1rem;
+            padding: 0.7rem 1rem; border-radius: 8px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .cmd-row:hover { border-color: var(--border-hover); }
+        .cmd-name { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); font-weight: 600; white-space: nowrap; min-width: 120px; }
+        .cmd-desc { color: var(--text-dim); font-size: 0.82rem; }
+
+        /* ── Footer ── */
+        footer {
+            border-top: 1px solid var(--border); padding: 3rem 2rem;
+            text-align: center; color: var(--text-muted); font-size: 0.85rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* ── Animations ── */
+        .fade-in {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        /* ── Mobile ── */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .nav-gh { display: none; }
+            .hamburger { display: block; }
+            .nav-links.open {
+                display: flex; flex-direction: column;
+                position: absolute; top: 100%; left: 0; right: 0;
+                background: rgba(6,6,11,0.95); backdrop-filter: blur(20px);
+                padding: 1.5rem 2rem; gap: 1rem;
+                border-bottom: 1px solid var(--border);
+            }
+            section { padding: 4rem 1.25rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .tools-grid { grid-template-columns: 1fr; }
+            .commands-grid { grid-template-columns: 1fr; }
+            .install-box { flex-direction: column; gap: 0.8rem; text-align: center; }
+            .install-box code { white-space: normal; word-break: break-all; }
+            .hero { min-height: auto; padding: 8rem 1.25rem 4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">🐑 <span>Wool</span></a>
+        <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">☰</button>
+        <ul class="nav-links">
+            <li><a href="#features" onclick="closeMenu()">Features</a></li>
+            <li><a href="#tools" onclick="closeMenu()">Tools</a></li>
+            <li><a href="#commands" onclick="closeMenu()">Commands</a></li>
+            <li><a href="#install" onclick="closeMenu()">Install</a></li>
+        </ul>
+        <a href="https://github.com/UniverseKing4/Wool" target="_blank" class="nav-gh">
+            <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            GitHub
+        </a>
+    </div>
+</nav>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<section class="hero">
+    <div class="hero-badge">✨ v0.1.0 — Open Source</div>
+    <h1>🐑 <span class="gradient">Wool</span></h1>
+    <p>Ultra-lightweight CLI AI Agent. Your terminal is the IDE. Wool is the brain.</p>
+
+    <div class="install-box" onclick="copyInstall()" id="installBox">
+        <code><span class="dollar">$</span> curl -fsSL https://universeking4.github.io/Wool/install.sh | bash</code>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+    </div>
+    <p class="hero-sub">Works on all <strong>Linux</strong> distros & <strong>Android Termux</strong> · <a href="https://github.com/UniverseKing4/Wool">View on GitHub →</a></p>
+</section>
+
+<!-- ═══════════════════ TERMINAL ═══════════════════ -->
+<section class="terminal-section">
+    <div class="terminal fade-in">
+        <div class="terminal-bar">
+            <div class="terminal-dot r"></div>
+            <div class="terminal-dot y"></div>
+            <div class="terminal-dot g"></div>
+            <div class="terminal-title">wool — bash</div>
+        </div>
+        <div class="terminal-body">
+<span class="success">✓</span> <span class="dim">Connected to 'exa' — 2 tools available.</span>
+<span class="success">✓</span> <span class="dim">Connected to 'firecrawl' — 26 tools available.</span>
+
+<span class="bold">🐑 Wool</span> <span class="dim">v0.1.0</span>
+<span class="dim">Ultra-lightweight CLI AI Agent</span>
+
+<span class="dim">Provider:</span> <span class="success">openrouter</span>  <span class="dim">│</span>  <span class="dim">Model:</span> <span class="prompt">gemini-2.5-pro</span>  <span class="dim">│</span>  <span class="dim">Session:</span> <span class="info">default</span>
+<span class="dim">Tools:</span> <span class="bold">7</span> <span class="dim">built-in</span>  <span class="dim">│</span>  <span class="dim">MCP:</span> <span class="bold">2</span> <span class="dim">servers (28 tools)</span>
+<span class="dim">Type</span> <span class="prompt">/help</span> <span class="dim">for commands</span>
+
+  <span class="dim">1</span> <span class="prompt">wool</span> <span class="dim">›</span> <span class="cmd">explain this codebase and create a test suite</span>
+  <span class="info">⠹</span> <span class="dim">thinking...</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ FEATURES ═══════════════════ -->
+<section id="features">
+    <h2 class="section-title fade-in"><span>Features</span></h2>
+    <p class="section-sub fade-in">Everything you need in a CLI agent. Nothing you don't.</p>
+    <div class="features-grid">
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🔌</div>
+            <h3>Multi-Provider</h3>
+            <p>Works with any OpenAI-compatible API — OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter, Ollama, LM Studio, and more. Hot-swap anytime.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🛠️</div>
+            <h3>7 Built-in Tools</h3>
+            <p>Bash execution, file I/O, code intelligence, web search, URL fetching, and parallel subagent delegation — all out of the box.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🔗</div>
+            <h3>MCP Protocol</h3>
+            <p>Connect to any MCP server — stdio, HTTP/SSE, or Streamable HTTP. Full support for authentication headers and auto-reconnect on startup.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">💬</div>
+            <h3>Session Management</h3>
+            <p>Multiple named sessions, interactive TUI browser, fork conversations, rewind history, rename, and AI-powered compaction.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">⚡</div>
+            <h3>Real-time Streaming</h3>
+            <p>Token-by-token streaming with live markdown rendering, reasoning/thinking display, and a smooth animated spinner.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🎯</div>
+            <h3>Goal Mode</h3>
+            <p>Set a goal and let Wool work autonomously across multiple turns until the task is fully complete. Hands-free automation.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🧠</div>
+            <h3>Parallel Subagents</h3>
+            <p>Delegate multiple tasks to independent sub-agents that run concurrently in the background. Results are collected automatically.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">📱</div>
+            <h3>Cross-Platform</h3>
+            <p>Native support for all Linux distros and Android Termux. Dynamic path resolution, native clipboard integration, zero hardcoded paths.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🪶</div>
+            <h3>Ultra-Lightweight</h3>
+            <p>Pure Python. No TUI frameworks, no curses, no heavy dependencies. Just a clean REPL with ANSI colours. ~30 source files total.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ TOOLS ═══════════════════ -->
+<section id="tools">
+    <h2 class="section-title fade-in"><span>Built-in Tools</span></h2>
+    <p class="section-sub fade-in">Powerful capabilities the AI can use autonomously.</p>
+    <div class="tools-grid">
+        <div class="tool-card fade-in">
+            <div class="tool-icon">⚙️</div>
+            <div>
+                <div class="tool-name">execute_bash</div>
+                <div class="tool-desc">Run shell commands with timeout, safety guards & process group isolation</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">📖</div>
+            <div>
+                <div class="tool-name">file_read</div>
+                <div class="tool-desc">Read files with line ranges, list directories, grep search, image info</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">✏️</div>
+            <div>
+                <div class="tool-name">file_write</div>
+                <div class="tool-desc">Create, replace, insert, or append file content with surgical precision</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">🔍</div>
+            <div>
+                <div class="tool-name">code_intelligence</div>
+                <div class="tool-desc">Symbol search, lookup definitions, codebase maps, and pattern search</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">🌐</div>
+            <div>
+                <div class="tool-name">web_fetch</div>
+                <div class="tool-desc">Fetch and extract readable content from any URL on the web</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">🔎</div>
+            <div>
+                <div class="tool-name">web_search</div>
+                <div class="tool-desc">Search the live web via DuckDuckGo and return structured results</div>
+            </div>
+        </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">🧩</div>
+            <div>
+                <div class="tool-name">use_subagent</div>
+                <div class="tool-desc">Delegate tasks to parallel sub-agents for concurrent background execution</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ COMMANDS ═══════════════════ -->
+<section id="commands">
+    <h2 class="section-title fade-in"><span>Commands</span></h2>
+    <p class="section-sub fade-in">All slash commands available inside the Wool REPL.</p>
+    <div class="commands-grid">
+        <div class="cmd-row fade-in"><span class="cmd-name">/help</span><span class="cmd-desc">Show all available commands</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/provider</span><span class="cmd-desc">Manage AI providers (list, add, remove, switch)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/model</span><span class="cmd-desc">View or change the active model</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/models</span><span class="cmd-desc">List all models from the provider</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/session(s)</span><span class="cmd-desc">Open interactive session menu</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/new</span><span class="cmd-desc">Create and switch to a new session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/rename</span><span class="cmd-desc">Rename the current session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/fork</span><span class="cmd-desc">Fork conversation to a new session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/rewind</span><span class="cmd-desc">Rewind history interactively</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">List all tools (built-in + MCP)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/mcp(s)</span><span class="cmd-desc">Manage MCP servers</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/goal</span><span class="cmd-desc">Autonomous goal mode</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/usage</span><span class="cmd-desc">View token usage stats</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/context</span><span class="cmd-desc">Context token breakdown</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/clear</span><span class="cmd-desc">Clear conversation history</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/compact</span><span class="cmd-desc">Compact history with AI summary</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/status</span><span class="cmd-desc">Show session status</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/copy</span><span class="cmd-desc">Copy last AI response to clipboard</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/exit</span><span class="cmd-desc">Exit Wool</span></div>
+    </div>
+</section>
+
+<!-- ═══════════════════ INSTALL ═══════════════════ -->
+<section id="install">
+    <h2 class="section-title fade-in"><span>Get Started</span></h2>
+    <p class="section-sub fade-in">One command. That's all it takes.</p>
+    <div style="max-width: 700px; margin: 0 auto;" class="fade-in">
+        <div class="install-box" onclick="copyInstall()" style="margin-bottom: 2rem;">
+            <code><span class="dollar">$</span> curl -fsSL https://universeking4.github.io/Wool/install.sh | bash</code>
+            <button class="copy-btn" id="copyBtn2">Copy</button>
+        </div>
+        <div style="text-align: center;">
+            <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1rem;">The installer automatically handles everything — Python, Git, pip, PATH configuration.</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Or install manually: <code style="font-family: var(--mono); color: var(--accent); background: rgba(34,211,238,0.08); padding: 0.2rem 0.5rem; border-radius: 4px;">pip install git+https://github.com/UniverseKing4/Wool.git</code></p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer>
+    <p>🐑 <strong>Wool</strong> — Ultra-lightweight CLI AI Agent</p>
+    <p style="margin-top: 0.5rem;">
+        <a href="https://github.com/UniverseKing4/Wool">GitHub</a> ·
+        MIT License ·
+        Made with ♡
+    </p>
+</footer>
+
+<script>
+    // ── Copy install command ──
+    function copyInstall() {
+        const cmd = 'curl -fsSL https://universeking4.github.io/Wool/install.sh | bash';
+        navigator.clipboard.writeText(cmd).then(() => {
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.textContent = '✓ Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+    }
+
+    // ── Close mobile menu ──
+    function closeMenu() {
+        document.querySelector('.nav-links').classList.remove('open');
+    }
+
+    // ── Scroll fade-in ──
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
