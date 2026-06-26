@@ -912,7 +912,7 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         # 2. Try Termux native clipboard (if on Android Termux)
         import shutil
         import subprocess
-        
+
         if shutil.which("termux-clipboard-set"):
             try:
                 proc = subprocess.Popen(["termux-clipboard-set"], stdin=subprocess.PIPE)

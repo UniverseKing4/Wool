@@ -23,6 +23,7 @@ from wool.utils.ansi import (
     cyan,
     dim,
     green,
+    magenta,
     white,
     yellow,
 )
@@ -35,8 +36,10 @@ from wool.utils.streaming import StreamPrinter
 def _print_banner(agent: WoolAgent) -> None:
     provider = agent.active_provider.name if agent.active_provider else "none"
     model = agent.active_model or "auto"
+    session = agent.config.active_session
     n_tools = len(agent.tool_registry.list_tools())
     n_mcp = len(agent.mcp_manager.list_servers())
+    n_mcp_tools = len(agent.mcp_manager.get_all_tools())
 
     print()
     print(f"  {bold(cyan('🐑 Wool'))} {dim('v' + __version__)}")
@@ -44,11 +47,19 @@ def _print_banner(agent: WoolAgent) -> None:
     print()
     print(
         f"  {dim('Provider:')} {green(provider)}  "
-        f"{dim('│')}  {dim('Model:')} {cyan(model)}"
+        f"{dim('│')}  {dim('Model:')} {cyan(model)}  "
+        f"{dim('│')}  {dim('Session:')} {magenta(session)}"
     )
+
+    mcp_str = (
+        f"{white(str(n_mcp))} {dim('servers')} {dim(f'({n_mcp_tools} tools)')}"
+        if n_mcp > 0
+        else f"{white('0')} {dim('servers')}"
+    )
+
     print(
         f"  {dim('Tools:')} {white(str(n_tools))} {dim('built-in')}  "
-        f"{dim('│')}  {dim('MCP:')} {white(str(n_mcp))} {dim('servers')}"
+        f"{dim('│')}  {dim('MCP:')} {mcp_str}"
     )
     print(f"  {dim('Type')} {yellow('/help')} {dim('for commands')}")
     print()
