@@ -160,7 +160,9 @@ class WoolAgent:
                 else:
                     last_msg = squashed_messages[-1]
                     if last_msg.role == msg.role and msg.role in ("user", "assistant"):
-                        if isinstance(last_msg.content, str) and isinstance(msg.content, str):
+                        if isinstance(last_msg.content, str) and isinstance(
+                            msg.content, str
+                        ):
                             last_msg.content += "\n\n" + msg.content
                         elif msg.content:
                             last_msg.content = msg.content

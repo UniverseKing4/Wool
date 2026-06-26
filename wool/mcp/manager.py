@@ -104,7 +104,9 @@ class MCPManager:
                 continue
             for tool in client.tools:
                 # MCP tools already have a similar structure; convert to OpenAI format.
-                raw_params = tool.get("inputSchema", {"type": "object", "properties": {}})
+                raw_params = tool.get(
+                    "inputSchema", {"type": "object", "properties": {}}
+                )
                 params = self._sanitize_schema(raw_params)
                 schemas.append(
                     {
