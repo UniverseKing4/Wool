@@ -90,12 +90,14 @@ async def run_repl() -> None:
         for name, mcp_cfg in config.mcp_servers.items():
             try:
                 await agent.mcp_manager.connect(
-                    name, 
+                    name,
                     command=mcp_cfg.get("command"),
                     url=mcp_cfg.get("url"),
                     env=mcp_cfg.get("env"),
-                    headers=mcp_cfg.get("headers")
+                    headers=mcp_cfg.get("headers"),
                 )
+                tools = agent.mcp_manager._clients[name].tools
+                success(f"Connected to '{name}' — {len(tools)} tools available.")
             except Exception as e:
                 print(f"  {red('✗')} Failed to auto-connect MCP '{name}': {e}")
         success(f"Restored {len(agent.mcp_manager.list_servers())} MCP servers.\n")

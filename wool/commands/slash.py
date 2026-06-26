@@ -300,7 +300,9 @@ class SlashCommandHandler:
     # ── /mcp ──────────────────────────────────────────────────────────────
 
     async def _mcp(self, args: str) -> bool:
-        parts = args.strip().split()
+        import shlex
+
+        parts = shlex.split(args.strip()) if args.strip() else []
         sub = parts[0] if parts else "list"
 
         if sub == "list":
@@ -318,30 +320,50 @@ class SlashCommandHandler:
         elif sub == "connect":
             if len(parts) < 3:
                 ansi_error("Usage: /mcp connect <name> <command...>")
-                ansi_error("   OR: /mcp connect <name> http <url>")
+                ansi_error('   OR: /mcp connect <name> http <url> [-H "Header: Value"]')
                 ansi_error("  e.g. /mcp connect myserver npx -y @my/mcp-server")
-                ansi_error("  e.g. /mcp connect web http https://mcp.exa.ai/mcp")
+                ansi_error(
+                    '  e.g. /mcp connect web http https://mcp.exa.ai/mcp -H "Authorization: Bearer 123"'
+                )
                 return False
             name = parts[1]
-            
+
             command = None
             url = None
+            headers = None
             if parts[2] == "http" and len(parts) > 3:
                 url = parts[3]
+                headers = {}
+                i = 4
+                while i < len(parts):
+                    if parts[i] in ("-H", "--header") and i + 1 < len(parts):
+                        header_str = parts[i + 1]
+                        if ":" in header_str:
+                            k, v = header_str.split(":", 1)
+                            headers[k.strip()] = v.strip()
+                        i += 2
+                    else:
+                        ansi_error(f"Unknown argument: {parts[i]}")
+                        return False
             else:
                 command = parts[2:]
-            
+
             if not command and not url:
                 ansi_error("Provide the command or http url to launch the MCP server.")
                 return False
-                
+
             info(f"Connecting to MCP server '{name}'...")
             try:
-                await self.agent.mcp_manager.connect(name, command=command, url=url)
+                await self.agent.mcp_manager.connect(
+                    name, command=command, url=url, headers=headers
+                )
                 if command:
                     self.agent.config.mcp_servers[name] = {"command": command}
                 else:
-                    self.agent.config.mcp_servers[name] = {"type": "http", "url": url}
+                    cfg = {"type": "http", "url": url}
+                    if headers:
+                        cfg["headers"] = headers
+                    self.agent.config.mcp_servers[name] = cfg
                 self.agent.config.save()
                 tools = self.agent.mcp_manager._clients[name].tools
                 success(f"Connected to '{name}' — {len(tools)} tools available.")

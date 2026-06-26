@@ -25,7 +25,9 @@ class MCPManager:
         if name in self._clients:
             await self._clients[name].disconnect()
 
-        client = MCPClient(name=name, command=command, url=url, env=env, headers=headers)
+        client = MCPClient(
+            name=name, command=command, url=url, env=env, headers=headers
+        )
         await client.connect()
         # Eagerly fetch tool list so they're available immediately.
         await client.list_tools()

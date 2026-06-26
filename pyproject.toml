@@ -20,3 +20,8 @@ wool = "wool.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["wool"]
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.15.20,<0.16.0)"
+]
