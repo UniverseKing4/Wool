@@ -58,6 +58,7 @@ class SlashCommandHandler:
             "/fork": self._fork,
             "/tools": self._tools,
             "/mcp": self._mcp,
+            "/mcps": self._mcp,
             "/usage": self._usage,
             "/context": self._context,
             "/goal": self._goal,

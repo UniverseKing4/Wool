@@ -125,6 +125,8 @@ class WoolAgent:
         self.save_session()
 
         if not self.active_provider:
+            self.messages.pop()
+            self.save_session()
             yield (
                 "text",
                 (
@@ -173,6 +175,9 @@ class WoolAgent:
                         yield "text", "\n" + red(f"Error: {event.content}") + "\n"
                         return
             except Exception as exc:
+                if iteration == 1:
+                    self.messages.pop()
+                    self.save_session()
                 yield "text", "\n" + red(f"Provider error: {exc}") + "\n"
                 return
 

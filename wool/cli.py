@@ -176,8 +176,11 @@ async def run_repl() -> None:
         loop = asyncio.get_running_loop()
         cancel_event = asyncio.Event()
 
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
+        try:
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+        except (Exception, getattr(termios, "error", Exception)):
+            old_settings = None
 
         def on_input() -> None:
             ch = sys.stdin.read(1)
@@ -359,8 +362,9 @@ async def run_repl() -> None:
                 sys.stdout.flush()
 
         try:
-            tty.setcbreak(fd)
-            loop.add_reader(fd, on_input)
+            if old_settings is not None:
+                tty.setcbreak(fd)
+                loop.add_reader(fd, on_input)
 
             spinner_task = asyncio.create_task(_spinner())
             task = asyncio.create_task(_consume())
@@ -410,8 +414,9 @@ async def run_repl() -> None:
             print(f"\r\n{dim('  (interrupted)')}")
             continue
         finally:
-            loop.remove_reader(fd)
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            if old_settings is not None:
+                loop.remove_reader(fd)
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
             agent.save_session()
 
         print()  # spacer after response
