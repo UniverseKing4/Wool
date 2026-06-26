@@ -134,36 +134,39 @@ else
     python3 -m pip install --user --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
 fi
 
-# Ensure ~/.local/bin is in PATH if not already
-SHELL_PROFILE=""
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
-        SHELL_PROFILE="$HOME/.zshrc"
-    elif [ -n "$BASH_VERSION" ] || [ -f "$HOME/.bashrc" ]; then
-        SHELL_PROFILE="$HOME/.bashrc"
-    else
-        SHELL_PROFILE="$HOME/.profile"
-    fi
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_PROFILE"
-    echo -e "${BLUE}ℹ Added ~/.local/bin to your PATH in $SHELL_PROFILE${NC}"
+# Detect the user's ACTUAL login shell (not the script runner)
+CURRENT_SHELL=$(basename "$SHELL" 2>/dev/null || echo "bash")
+
+if [ "$CURRENT_SHELL" = "zsh" ]; then
+    SHELL_RC="$HOME/.zshrc"
+    RECOMMENDED_SOURCE="source ~/.zshrc"
+elif [ "$CURRENT_SHELL" = "fish" ]; then
+    SHELL_RC="$HOME/.config/fish/config.fish"
+    RECOMMENDED_SOURCE="source ~/.config/fish/config.fish"
+elif [ -f "$HOME/.bashrc" ]; then
+    SHELL_RC="$HOME/.bashrc"
+    RECOMMENDED_SOURCE="source ~/.bashrc"
+else
+    SHELL_RC="$HOME/.profile"
+    RECOMMENDED_SOURCE="source ~/.profile"
 fi
 
-# Detect the current shell to give accurate instructions
-CURRENT_SHELL=$(basename "$SHELL" 2>/dev/null || echo "bash")
-if [ "$CURRENT_SHELL" = "zsh" ] || [ -n "$ZSH_VERSION" ]; then
-    RECOMMENDED_PROFILE="~/.zshrc"
-elif [ "$CURRENT_SHELL" = "bash" ] || [ -n "$BASH_VERSION" ]; then
-    RECOMMENDED_PROFILE="~/.bashrc"
-else
-    RECOMMENDED_PROFILE="~/.profile"
+# Ensure ~/.local/bin is in the user's shell profile if not already present
+if ! grep -qF '.local/bin' "$SHELL_RC" 2>/dev/null; then
+    echo '' >> "$SHELL_RC"
+    echo '# Added by Wool installer' >> "$SHELL_RC"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
+    echo -e "${BLUE}ℹ Added ~/.local/bin to PATH in $SHELL_RC${NC}"
 fi
 
 echo ""
-echo -e "${GREEN}✓ Wool installed successfully! 🐑${NC}"
-if [ -n "$SHELL_PROFILE" ]; then
-    echo -e "Please restart your terminal or run: ${BOLD}source $RECOMMENDED_PROFILE${NC}"
-else
-    # Even if we didn't add PATH, pipx might require a shell refresh for autocompletion/hashing
-    echo -e "If 'wool' is not found, restart your terminal or run: ${BOLD}source $RECOMMENDED_PROFILE${NC}"
-fi
-echo -e "You can then run it by typing: ${BOLD}wool${NC}"
+echo -e "${GREEN}────────────────────────────────────────${NC}"
+echo -e "${GREEN}  ✓ Wool installed successfully! 🐑${NC}"
+echo -e "${GREEN}────────────────────────────────────────${NC}"
+echo ""
+echo -e "  To get started, run:"
+echo -e "    ${BOLD}${RECOMMENDED_SOURCE}${NC}"
+echo -e "    ${BOLD}wool${NC}"
+echo ""
+echo -e "  ${BLUE}Or simply restart your terminal, then type: ${BOLD}wool${NC}"
+echo ""

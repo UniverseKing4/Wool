@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Wool — Ultra-lightweight CLI AI Agent</title>
     <meta name="description" content="Wool is an ultra-lightweight CLI AI agent. One command, infinite power. Works with any AI provider, 7 built-in tools, MCP support, sessions, and more.">
     <meta property="og:title" content="Wool — Ultra-lightweight CLI AI Agent">
@@ -32,7 +32,7 @@
             --mono: 'JetBrains Mono', 'Fira Code', monospace;
         }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; overflow-x: hidden; }
 
         body {
             font-family: var(--font);
@@ -40,6 +40,8 @@
             color: var(--text);
             line-height: 1.7;
             overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+            touch-action: pan-y;
         }
 
         /* ── Scrollbar ── */
