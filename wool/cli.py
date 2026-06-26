@@ -109,6 +109,7 @@ async def run_repl(resume: bool = False) -> None:
     commands = SlashCommandHandler(agent)
 
     if resume:
+        agent._has_resumed = True
         # We are resuming. Let the user know if we loaded previous messages.
         n_user = sum(1 for m in agent.messages if m.role == "user")
         n_asst = sum(1 for m in agent.messages if m.role == "assistant")

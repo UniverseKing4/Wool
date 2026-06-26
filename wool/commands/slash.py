@@ -563,6 +563,10 @@ class SlashCommandHandler:
     # ── /resume, /continue ────────────────────────────────────────────────
 
     async def _resume(self, _args: str) -> bool:
+        if getattr(self.agent, "_has_resumed", False):
+            ansi_error("You have already resumed a session.")
+            return False
+
         last = self.agent.config.last_session
         current = self.agent.config.active_session
 
@@ -574,11 +578,13 @@ class SlashCommandHandler:
             info("You are already in the most recently used session.")
             return False
 
-        # Swap active and last so they can toggle back and forth
+        # Switch to the last session
         self.agent.save_session()
         self.agent.config.active_session = last
-        self.agent.config.last_session = current
+        # We don't swap them; the user just wants to jump there once
         self.agent.config.save()
+
+        self.agent._has_resumed = True
 
         self.agent.load_session()
         n = len(self.agent.messages)
