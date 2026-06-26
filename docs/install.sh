@@ -9,11 +9,17 @@ YELLOW='\033[1;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "${BLUE}🐑 Installing Wool AI CLI...${NC}"
-
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
+
+ALREADY_INSTALLED=false
+if command_exists wool; then
+    ALREADY_INSTALLED=true
+    echo -e "${BLUE}🐑 Updating Wool AI CLI...${NC}"
+else
+    echo -e "${BLUE}🐑 Installing Wool AI CLI...${NC}"
+fi
 
 # 1. Detect environment and package manager
 PM=""
@@ -153,22 +159,34 @@ else
     RECOMMENDED_SOURCE="source ~/.profile"
 fi
 
+PATH_MODIFIED=false
 # Ensure ~/.local/bin is in the user's shell profile if not already present
 if ! grep -qF '.local/bin' "$SHELL_RC" 2>/dev/null; then
     echo '' >> "$SHELL_RC"
     echo '# Added by Wool installer' >> "$SHELL_RC"
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
     echo -e "${BLUE}ℹ Added ~/.local/bin to PATH in $SHELL_RC${NC}"
+    PATH_MODIFIED=true
 fi
 
 echo ""
 echo -e "${GREEN}────────────────────────────────────────${NC}"
-echo -e "${GREEN}  ✓ Wool installed successfully! 🐑${NC}"
+if [ "$ALREADY_INSTALLED" = true ]; then
+    echo -e "${GREEN}  ✓ Wool updated successfully! 🐑${NC}"
+else
+    echo -e "${GREEN}  ✓ Wool installed successfully! 🐑${NC}"
+fi
 echo -e "${GREEN}────────────────────────────────────────${NC}"
 echo ""
-echo -e "  To get started, run:"
-echo -e "    ${BOLD}${RECOMMENDED_SOURCE}${NC}"
-echo -e "    ${BOLD}wool${NC}"
-echo ""
-echo -e "  ${BLUE}Or simply restart your terminal, then type: ${BOLD}wool${NC}"
-echo ""
+
+if [ "$PATH_MODIFIED" = true ]; then
+    echo -e "  To get started, run:"
+    echo -e "    ${BOLD}${RECOMMENDED_SOURCE}${NC}"
+    echo -e "    ${BOLD}wool${NC}"
+    echo ""
+    echo -e "  ${BLUE}Or simply restart your terminal, then type: ${BOLD}wool${NC}"
+    echo ""
+elif [ "$ALREADY_INSTALLED" = false ]; then
+    echo -e "  To get started, type: ${BOLD}wool${NC}"
+    echo ""
+fi
