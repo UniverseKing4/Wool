@@ -77,22 +77,22 @@ class StreamPrinter:
             return
 
         from wool.utils.markdown import (
-            _FENCE_RE,
-            _HEADING_RE,
-            _BLOCKQUOTE_RE,
-            _ULIST_RE,
-            _OLIST_RE,
-            _HR_RE,
-            _style_inline,
-            _LIST_BULLETS,
-            _a,
-            _DIM,
-            _RST,
             _BG_GRAY,
+            _BLOCKQUOTE_RE,
+            _DIM,
+            _FENCE_RE,
             _FG_CYAN,
             _FG_GREEN,
-            _ITALIC,
             _HEADING_COLORS,
+            _HEADING_RE,
+            _HR_RE,
+            _ITALIC,
+            _LIST_BULLETS,
+            _OLIST_RE,
+            _RST,
+            _ULIST_RE,
+            _a,
+            _style_inline,
         )
 
         if self._in_code_block:
@@ -230,7 +230,7 @@ class StreamPrinter:
             self._print_line(self._buffer)
 
         if self._in_code_block:
-            from wool.utils.markdown import _a, _DIM, _RST
+            from wool.utils.markdown import _DIM, _RST, _a
 
             sys.stdout.write(
                 self._apply_style(f"  {_a(_DIM)}└{'─' * 44}┘{_a(_RST)}") + "\r\n"

@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Any, AsyncIterator
 
-from wool.config import WoolConfig, CONFIG_DIR
+from wool.config import CONFIG_DIR, WoolConfig
 from wool.mcp import MCPManager
 from wool.providers import (
     ChatMessage,
@@ -174,12 +175,28 @@ class WoolAgent:
                     elif event.type == "error":
                         yield "text", "\n" + red(f"Error: {event.content}") + "\n"
                         return
-            except Exception as exc:
-                if iteration == 1:
+            except BaseException as exc:
+                if iteration == 1 and not accumulated_text and not pending_tool_calls:
                     self.messages.pop()
                     self.save_session()
-                yield "text", "\n" + red(f"Provider error: {exc}") + "\n"
-                return
+                elif accumulated_text or pending_tool_calls:
+                    fc = accumulated_text
+                    if accumulated_reasoning:
+                        fc = f"<think>\n{accumulated_reasoning}\n</think>\n{fc}"
+                    self.messages.append(
+                        ChatMessage(
+                            role="assistant",
+                            content=fc or None,
+                            tool_calls=pending_tool_calls or None,
+                            usage=last_usage,
+                        )
+                    )
+                    self.save_session()
+
+                if isinstance(exc, Exception):
+                    yield "text", "\n" + red(f"Provider error: {exc}") + "\n"
+                    return
+                raise
 
             # Record the assistant turn.
             final_content = accumulated_text
@@ -450,7 +467,6 @@ class WoolAgent:
         yield "text", "\n" + yellow("⚠ Reached maximum tool iterations.") + "\n"
 
     # ── session management ────────────────────────────────────────────────
-    from pathlib import Path
 
     def get_session_path(self, session_name: str | None = None) -> Path:
         name = session_name or self.config.active_session

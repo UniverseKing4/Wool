@@ -11,7 +11,6 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Self
 
-
 CONFIG_DIR: Path = Path.home() / ".config" / "wool"
 CONFIG_FILE: Path = CONFIG_DIR / "config.json"
 

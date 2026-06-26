@@ -56,6 +56,39 @@ class MCPManager:
             for c in self._clients.values()
         ]
 
+    def _sanitize_schema(self, schema: Any) -> Any:
+        """Recursively ensure JSON schema compatibility with strict providers (like Gemini)."""
+        if not isinstance(schema, dict):
+            return schema
+
+        # Copy to avoid mutating original MCP schema reference which could affect future calls
+        schema = dict(schema)
+        
+        if "type" in schema and isinstance(schema["type"], list):
+            # Gemini only supports a single type string, pick the first non-null one
+            types = [t for t in schema["type"] if t != "null"]
+            schema["type"] = types[0] if types else "string"
+            
+        t = schema.get("type")
+
+        if t == "array":
+            if "items" not in schema:
+                schema["items"] = {"type": "string"}
+            else:
+                schema["items"] = self._sanitize_schema(schema["items"])
+        elif t == "object":
+            if "properties" in schema:
+                props = {}
+                for k, v in schema["properties"].items():
+                    props[k] = self._sanitize_schema(v)
+                schema["properties"] = props
+
+        for key in ["anyOf", "allOf", "oneOf"]:
+            if key in schema and isinstance(schema[key], list):
+                schema[key] = [self._sanitize_schema(s) for s in schema[key]]
+
+        return schema
+
     def get_all_tools(self) -> list[dict]:
         """Return OpenAI-compatible tool schemas from all connected MCP servers."""
         schemas: list[dict] = []
@@ -64,15 +97,15 @@ class MCPManager:
                 continue
             for tool in client.tools:
                 # MCP tools already have a similar structure; convert to OpenAI format.
+                raw_params = tool.get("inputSchema", {"type": "object", "properties": {}})
+                params = self._sanitize_schema(raw_params)
                 schemas.append(
                     {
                         "type": "function",
                         "function": {
                             "name": tool.get("name", ""),
                             "description": tool.get("description", ""),
-                            "parameters": tool.get(
-                                "inputSchema", {"type": "object", "properties": {}}
-                            ),
+                            "parameters": params,
                         },
                     }
                 )

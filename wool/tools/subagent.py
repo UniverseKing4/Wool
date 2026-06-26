@@ -71,9 +71,10 @@ class SubagentDelegation(Tool):
                 success=False, output="", error="Task description is required."
             )
 
-        from wool.config import WoolConfig
-        from wool.agent import WoolAgent
         import uuid
+
+        from wool.agent import WoolAgent
+        from wool.config import WoolConfig
 
         sub_config = WoolConfig.load()
         sub_config.active_session = f"subagent_{uuid.uuid4().hex[:8]}"

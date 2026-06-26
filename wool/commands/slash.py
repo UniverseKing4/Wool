@@ -15,13 +15,15 @@ from wool.utils.ansi import (
     cyan,
     dim,
     green,
+    info,
     magenta,
     red,
-    white,
-    info,
-    error as ansi_error,
     success,
     warning,
+    white,
+)
+from wool.utils.ansi import (
+    error as ansi_error,
 )
 
 if TYPE_CHECKING:
@@ -942,8 +944,8 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
             warning("No AI response found to copy.")
             return False
 
-        import sys
         import base64
+        import sys
 
         # 1. Try OSC 52 (works over SSH/Codespaces)
         try:

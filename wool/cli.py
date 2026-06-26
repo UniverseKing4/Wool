@@ -7,12 +7,12 @@ with ANSI colours.
 from __future__ import annotations
 
 import asyncio
-import sys
-import termios
-import tty
 import readline
 import signal
+import sys
+import termios
 import time
+import tty
 
 from wool import __version__
 from wool.agent import WoolAgent
@@ -28,7 +28,6 @@ from wool.utils.ansi import (
     yellow,
 )
 from wool.utils.streaming import StreamPrinter
-
 
 # ── banner ────────────────────────────────────────────────────────────────────
 
@@ -122,7 +121,7 @@ async def run_repl(resume: bool = False) -> None:
             )
 
     if config.mcp_servers:
-        from wool.utils.ansi import red, info, success
+        from wool.utils.ansi import info, red, success
 
         print()
         info("Restoring MCP connections...")

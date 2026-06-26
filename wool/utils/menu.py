@@ -1,6 +1,7 @@
 import os
-import sys
 import select
+import shutil
+import sys
 import termios
 import tty
 
@@ -34,8 +35,6 @@ def run_session_menu(
     print(f"\n  {bold(cyan('Sessions:'))}")
 
     try:
-        import shutil
-
         term_lines = shutil.get_terminal_size().lines
     except Exception:
         term_lines = 24
@@ -43,8 +42,6 @@ def run_session_menu(
 
     def _render(offset: int, sel: int) -> list[str]:
         try:
-            import shutil
-
             term_width = shutil.get_terminal_size().columns
         except Exception:
             term_width = 80
@@ -179,8 +176,6 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
     max_display = 15
 
     try:
-        import shutil
-
         term_width = shutil.get_terminal_size().columns
     except Exception:
         term_width = 80
