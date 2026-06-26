@@ -63,12 +63,23 @@ class MCPManager:
 
         # Copy to avoid mutating original MCP schema reference which could affect future calls
         schema = dict(schema)
-        
+
+        # Gemini backend compilation hangs on complex union types (anyOf/allOf/oneOf).
+        # We simplify them by just picking the first valid type and merging it in.
+        for key in ["anyOf", "allOf", "oneOf"]:
+            if key in schema and isinstance(schema[key], list) and len(schema[key]) > 0:
+                first_option = self._sanitize_schema(schema[key][0])
+                if isinstance(first_option, dict):
+                    for k, v in first_option.items():
+                        if k not in schema:
+                            schema[k] = v
+                del schema[key]
+
         if "type" in schema and isinstance(schema["type"], list):
             # Gemini only supports a single type string, pick the first non-null one
             types = [t for t in schema["type"] if t != "null"]
             schema["type"] = types[0] if types else "string"
-            
+
         t = schema.get("type")
 
         if t == "array":
@@ -82,10 +93,6 @@ class MCPManager:
                 for k, v in schema["properties"].items():
                     props[k] = self._sanitize_schema(v)
                 schema["properties"] = props
-
-        for key in ["anyOf", "allOf", "oneOf"]:
-            if key in schema and isinstance(schema[key], list):
-                schema[key] = [self._sanitize_schema(s) for s in schema[key]]
 
         return schema
 

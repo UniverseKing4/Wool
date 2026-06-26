@@ -152,9 +152,28 @@ class WoolAgent:
             pending_tool_calls: list[ToolCall] = []
             last_usage = None
 
+            # Ensure messages are squashed to prevent consecutive roles breaking upstream proxies/LLMs
+            squashed_messages: list[ChatMessage] = []
+            for msg in self.messages:
+                if not squashed_messages:
+                    squashed_messages.append(ChatMessage.from_dict(msg.to_dict()))
+                else:
+                    last_msg = squashed_messages[-1]
+                    if last_msg.role == msg.role and msg.role in ("user", "assistant"):
+                        if isinstance(last_msg.content, str) and isinstance(msg.content, str):
+                            last_msg.content += "\n\n" + msg.content
+                        elif msg.content:
+                            last_msg.content = msg.content
+                        if msg.tool_calls:
+                            if not last_msg.tool_calls:
+                                last_msg.tool_calls = []
+                            last_msg.tool_calls.extend(msg.tool_calls)
+                    else:
+                        squashed_messages.append(ChatMessage.from_dict(msg.to_dict()))
+
             try:
                 async for event in self.active_provider.chat_completion_stream(
-                    messages=self.messages,
+                    messages=squashed_messages,
                     model=model,
                     tools=all_schemas or None,
                     temperature=0.0,
