@@ -23,5 +23,8 @@ packages = ["wool"]
 
 [dependency-groups]
 dev = [
-    "ruff (>=0.15.20,<0.16.0)"
+    "ruff (>=0.15.20,<0.16.0)",
+    "mypy (>=2.1.0,<3.0.0)",
+    "types-aiofiles (>=25.1.0.20260518,<26.0.0.0)",
+    "types-pyperclip (>=1.11.0.20260508,<2.0.0.0)"
 ]

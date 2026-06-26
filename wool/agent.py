@@ -294,9 +294,7 @@ class WoolAgent:
             pending_tool_calls = expanded_tool_calls
 
             # Execute each tool call concurrently and feed results back as they finish.
-            import asyncio
-
-            async def execute_tool(tc):
+            async def execute_tool(tc: ToolCall) -> tuple[ToolCall, dict[str, Any], str]:
                 try:
                     args: dict[str, Any] = (
                         json.loads(tc.arguments) if tc.arguments else {}

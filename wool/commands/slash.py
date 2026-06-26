@@ -361,7 +361,7 @@ class SlashCommandHandler:
                 if command:
                     self.agent.config.mcp_servers[name] = {"command": command}
                 else:
-                    cfg = {"type": "http", "url": url}
+                    cfg: dict[str, Any] = {"type": "http", "url": url}
                     if headers:
                         cfg["headers"] = headers
                     self.agent.config.mcp_servers[name] = cfg
