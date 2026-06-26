@@ -204,8 +204,6 @@ class WoolAgent:
                     bg_tasks = self._active_bg_tasks
                     self._active_bg_tasks = []
 
-                    import asyncio
-
                     yield (
                         "tool",
                         f"\r\n  {dim('┌─')} {cyan('System')} {dim('──────────────────────────────────────────')}\r\n",
@@ -495,8 +493,6 @@ class WoolAgent:
     async def shutdown(self) -> None:
         self.save_session()
         if hasattr(self, "_active_bg_tasks"):
-            import asyncio
-
             for t in self._active_bg_tasks:
                 if not t.done():
                     t.cancel()
