@@ -148,9 +148,22 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo -e "${BLUE}ℹ Added ~/.local/bin to your PATH in $SHELL_PROFILE${NC}"
 fi
 
+# Detect the current shell to give accurate instructions
+CURRENT_SHELL=$(basename "$SHELL" 2>/dev/null || echo "bash")
+if [ "$CURRENT_SHELL" = "zsh" ] || [ -n "$ZSH_VERSION" ]; then
+    RECOMMENDED_PROFILE="~/.zshrc"
+elif [ "$CURRENT_SHELL" = "bash" ] || [ -n "$BASH_VERSION" ]; then
+    RECOMMENDED_PROFILE="~/.bashrc"
+else
+    RECOMMENDED_PROFILE="~/.profile"
+fi
+
 echo ""
 echo -e "${GREEN}✓ Wool installed successfully! 🐑${NC}"
 if [ -n "$SHELL_PROFILE" ]; then
-    echo -e "Please restart your terminal or run: ${BOLD}source $SHELL_PROFILE${NC}"
+    echo -e "Please restart your terminal or run: ${BOLD}source $RECOMMENDED_PROFILE${NC}"
+else
+    # Even if we didn't add PATH, pipx might require a shell refresh for autocompletion/hashing
+    echo -e "If 'wool' is not found, restart your terminal or run: ${BOLD}source $RECOMMENDED_PROFILE${NC}"
 fi
 echo -e "You can then run it by typing: ${BOLD}wool${NC}"
