@@ -561,10 +561,14 @@ class SlashCommandHandler:
     # ── /resume, /continue ────────────────────────────────────────────────
 
     async def _resume(self, _args: str) -> bool:
+        current_len = len(self.agent.messages)
         self.agent.load_session()
-        n = len(self.agent.messages)
-        if n == 0:
+        new_len = len(self.agent.messages)
+
+        if new_len == 0:
             info("No previous conversation found in this session.")
+        elif current_len > 0 and current_len == new_len:
+            info("Session is already active and up to date.")
         else:
             n_user = sum(1 for m in self.agent.messages if m.role == "user")
             n_asst = sum(1 for m in self.agent.messages if m.role == "assistant")
