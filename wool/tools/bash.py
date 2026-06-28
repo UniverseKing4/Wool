@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import shlex
 import signal
 from typing import Any
 
-from wool.tools.base import Tool, ToolParameter, ToolResult
+from wool.tools.base import Tool, ToolParameter, ToolResult, RESTRICTED_DIR
 import wool.tools.base as base
 
 # Commands that should never be run.
@@ -80,14 +81,48 @@ class ExecuteBash(Tool):
                 )
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "bash",
-                "-c",
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                start_new_session=True,  # own process group for clean kill
-            )
+            if base.IS_RESTRICTED:
+                script = f'''
+RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
+PARENT=$(dirname "$RESTRICTED")
+
+# Overmount visible siblings to prevent path traversal
+for item in "$PARENT"/*; do
+    if [ "$item" = "$PARENT/*" ]; then continue; fi
+    if [ "$item" != "$RESTRICTED" ] && [ -d "$item" ]; then
+        mount -t tmpfs tmpfs "$item" 2>/dev/null || true
+    elif [ "$item" != "$RESTRICTED" ] && [ -f "$item" ]; then
+        mount --bind /dev/null "$item" 2>/dev/null || true
+    fi
+done
+
+# For directories safely outside /home, apply strict parent overmount
+if [[ "$PARENT" != /home* ]] && [[ "$PARENT" != /root* ]]; then
+    mount --bind "$RESTRICTED" /mnt
+    mount -t tmpfs tmpfs "$PARENT" 2>/dev/null || true
+    mkdir -p "$RESTRICTED"
+    mount --bind /mnt "$RESTRICTED" 2>/dev/null || true
+    umount /mnt 2>/dev/null || true
+fi
+
+cd "$RESTRICTED"
+exec bash -c {shlex.quote(command)}
+'''
+                proc = await asyncio.create_subprocess_exec(
+                    "unshare", "-m", "-r", "bash", "-c", script,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    start_new_session=True,  # own process group for clean kill
+                )
+            else:
+                proc = await asyncio.create_subprocess_exec(
+                    "bash",
+                    "-c",
+                    command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    start_new_session=True,  # own process group for clean kill
+                )
 
             try:
                 stdout_b, stderr_b = await asyncio.wait_for(
