@@ -124,29 +124,51 @@ exec bash -c {shlex.quote(command)}
                     start_new_session=True,  # own process group for clean kill
                 )
 
+            stream_callback = kwargs.get("__stream_callback")
+            
+            stdout_chunks: list[str] = []
+            stderr_chunks: list[str] = []
+
+            async def read_stream(stream: asyncio.StreamReader, chunks_list: list[str]) -> None:
+                while True:
+                    chunk = await stream.read(1024)
+                    if not chunk:
+                        break
+                    text = chunk.decode(errors="replace")
+                    chunks_list.append(text)
+                    if stream_callback:
+                        await stream_callback(text)
+
+            assert proc.stdout is not None
+            assert proc.stderr is not None
+
             try:
-                stdout_b, stderr_b = await asyncio.wait_for(
-                    proc.communicate(), timeout=timeout
+                await asyncio.wait_for(
+                    asyncio.gather(
+                        read_stream(proc.stdout, stdout_chunks),
+                        read_stream(proc.stderr, stderr_chunks)
+                    ),
+                    timeout=timeout
                 )
+                stdout = "".join(stdout_chunks)
+                stderr = "".join(stderr_chunks)
+                await proc.wait()
             except asyncio.TimeoutError:
-                # Kill the whole process group.
+                stdout = "".join(stdout_chunks)
+                stderr = "".join(stderr_chunks)
+                # Terminate the process group to kill all descendants
                 try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                except (ProcessLookupError, PermissionError):
-                    try:
-                        proc.kill()
-                    except ProcessLookupError:
-                        pass
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
                 await proc.wait()
                 return ToolResult(
                     success=False,
-                    output="",
-                    error=f"Command timed out after {timeout}s and was killed.",
+                    output=stdout,
+                    error=f"Command timed out after {timeout} seconds. Stderr: {stderr}",
                     metadata={"exit_code": -9},
                 )
 
-            stdout = stdout_b.decode(errors="replace")
-            stderr = stderr_b.decode(errors="replace")
             combined = stdout
             if stderr:
                 combined += ("\n--- stderr ---\n" + stderr) if stdout else stderr

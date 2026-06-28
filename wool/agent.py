@@ -334,9 +334,12 @@ class WoolAgent:
             pending_tool_calls = expanded_tool_calls
 
             # Execute each tool call concurrently and feed results back as they finish.
+            queue: asyncio.Queue[tuple[Any, ...]] = asyncio.Queue()
+            is_streaming = len(pending_tool_calls) == 1 and pending_tool_calls[0].name == "execute_bash"
+            
             async def execute_tool(
                 tc: ToolCall,
-            ) -> tuple[ToolCall, dict[str, Any], str]:
+            ) -> None:
                 try:
                     args: dict[str, Any] = (
                         json.loads(tc.arguments) if tc.arguments else {}
@@ -345,6 +348,13 @@ class WoolAgent:
                     args = {}
 
                 tool = self.tool_registry.get(tc.name)
+                
+                async def stream_cb(chunk: str):
+                    await queue.put(("tool_stream", tc.name, chunk))
+                    
+                if is_streaming:
+                    args["__stream_callback"] = stream_cb
+
                 if tool:
                     try:
                         result = await tool.execute(**args)
@@ -367,14 +377,26 @@ class WoolAgent:
                     except Exception as exc:
                         result_text = f"Tool not found: {exc}"
 
-                return tc, args, result_text
+                await queue.put(("tool_done", tc.id, tc, args, result_text))
 
             tasks = {}
             for tc in pending_tool_calls:
                 if tc.name == "use_subagent":
                     # Run in background but save the task so we can wait for it at the end of the turn
                     async def run_bg_subagent(bg_tc):
-                        _, _, bg_res = await execute_tool(bg_tc)
+                        try:
+                            bg_args = json.loads(bg_tc.arguments) if bg_tc.arguments else {}
+                        except json.JSONDecodeError:
+                            bg_args = {}
+                        tool = self.tool_registry.get(bg_tc.name)
+                        if tool:
+                            try:
+                                result = await tool.execute(**bg_args)
+                                bg_res = result.output if result.success else f"Error: {result.error or result.output}"
+                            except Exception as e:
+                                bg_res = f"Error: {e}"
+                        else:
+                            bg_res = "Tool not found"
                         return bg_tc, bg_res
 
                     bg_task = asyncio.create_task(run_bg_subagent(tc))
@@ -384,11 +406,13 @@ class WoolAgent:
 
                     # Return immediate success to the LLM so it can continue streaming the current turn!
                     async def instant_success(tc):
-                        return (
+                        await queue.put((
+                            "tool_done",
+                            tc.id,
                             tc,
                             {},
                             "Subagent successfully spawned and is running in the background. You may continue your work.",
-                        )
+                        ))
 
                     tasks[tc.id] = asyncio.create_task(instant_success(tc))
                 else:
@@ -421,34 +445,78 @@ class WoolAgent:
                         f"  {dim('└─')} {dim('[Spawned background task]')}\r\n\r\n",
                     )
                 else:
-                    yield "tool", f"  {dim('└─')} {dim('[Executing...]')}\r\n\r\n"
+                    if is_streaming and tc == pending_tool_calls[0]:
+                        yield "tool", f"  {dim('├─')} {dim('[Live Output]')}\r\n"
+                    else:
+                        yield "tool", f"  {dim('└─')} {dim('[Executing...]')}\r\n\r\n"
 
             # 2. Wait for them as they complete and print results in separate boxes!
+            class IndentFilter:
+                def __init__(self, prefix: str):
+                    self.prefix = prefix
+                    self.needs_prefix = True
+                def process(self, text: str) -> str:
+                    if not text:
+                        return ""
+                    result = []
+                    for char in text:
+                        if self.needs_prefix:
+                            result.append(self.prefix)
+                            self.needs_prefix = False
+                        if char == '\n':
+                            result.append('\r')
+                            result.append('\n')
+                            self.needs_prefix = True
+                        elif char == '\r':
+                            result.append('\r')
+                            self.needs_prefix = True
+                        else:
+                            result.append(char)
+                    return "".join(result)
+            
+            stream_filter = IndentFilter(f"  {dim('│')} ")
             completed_results: dict[str, str] = {}
+            pending_count = len(tasks)
             try:
-                for completed_task in asyncio.as_completed(tasks.values()):
-                    tc, args, result_text = await completed_task
+                while pending_count > 0:
+                    q_item = await queue.get()
+                    msg_type = q_item[0]
+                    if msg_type == "tool_stream":
+                        _, t_name, chunk = q_item  # type: ignore
+                        yield "tool", stream_filter.process(chunk)
+                    elif msg_type == "tool_done":
+                        _, tc_id, tc, args, result_text = q_item  # type: ignore
+                        
+                        # Cap result length to avoid excessive memory usage.
+                        if len(result_text) > 30_000:
+                            result_text = result_text[:30_000] + "\n… (truncated)"
 
-                    # Cap result length to avoid excessive memory usage.
-                    if len(result_text) > 30_000:
-                        result_text = result_text[:30_000] + "\n… (truncated)"
+                        completed_results[tc_id] = result_text
+                        pending_count -= 1
+                        
+                        if is_streaming and tc_id == pending_tool_calls[0].id:
+                            if not stream_filter.needs_prefix:
+                                yield "tool", "\r\n"
+                            
+                            # if error that might not be in stream, append it!
+                            if result_text.startswith("Error: Command timed out") or result_text.startswith("Tool execution error"):
+                                yield "tool", f"  {dim('│')} {red(result_text)}\r\n"
+                            yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
+                        else:
+                            # Show immersive full output with ANSI borders for the result
+                            output_lines = result_text.splitlines()
+                            num_lines = len(output_lines)
 
-                    completed_results[tc.id] = result_text
-
-                    # Show immersive full output with ANSI borders for the result
-                    output_lines = result_text.splitlines()
-                    num_lines = len(output_lines)
-
-                    yield (
-                        "tool",
-                        f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n",
-                    )
-                    for line in output_lines:
-                        yield "tool", f"  {dim('│')} {dim(line)}\r\n"
-                    yield (
-                        "tool",
-                        f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
-                    )
+                            yield (
+                                "tool",
+                                f"  {dim('┌─')} {cyan(tc.name)} {bold(f'Result ({num_lines} lines):')} {dim('─────────────')}\r\n",
+                            )
+                            for line in output_lines:
+                                yield "tool", f"  {dim('│')} {dim(line)}\r\n"
+                            yield (
+                                "tool",
+                                f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
+                            )
             finally:
                 for t in tasks.values():
                     if not t.done():
