@@ -367,7 +367,7 @@ async def run_repl(resume: bool = False) -> None:
                         reasoning_printer.print_chunk(chunk)
                     elif chunk_type == "tool_start":
                         tools_used += 1
-                    elif chunk_type == "tool":
+                    elif chunk_type in ("tool", "tool_stream"):
                         if has_reasoned and not transitioned:
                             reasoning_printer.finish()
                             sys.stdout.write("\r\n")

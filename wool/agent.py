@@ -491,7 +491,7 @@ class WoolAgent:
                     msg_type = q_item[0]
                     if msg_type == "tool_stream":
                         _, t_name, chunk = q_item  # type: ignore
-                        yield "tool", stream_filter.process(chunk)
+                        yield "tool_stream", stream_filter.process(chunk)
                     elif msg_type == "tool_done":
                         _, tc_id, tc, args, result_text = q_item  # type: ignore
                         
