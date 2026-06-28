@@ -102,7 +102,7 @@ exec {cmd_str}
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "wool", "version": "0.1.0"},
+                "clientInfo": {"name": "wool", "version": "1.0.0"},
             },
         )
         # Send initialized notification (no response expected).
@@ -126,7 +126,7 @@ exec {cmd_str}
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "wool", "version": "0.1.0"},
+                "clientInfo": {"name": "wool", "version": "1.0.0"},
             },
         }
 
@@ -168,7 +168,7 @@ exec {cmd_str}
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "wool", "version": "0.1.0"},
+                "clientInfo": {"name": "wool", "version": "1.0.0"},
             },
         )
         await self._notify("notifications/initialized", {})
