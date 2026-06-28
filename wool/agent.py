@@ -64,6 +64,7 @@ class WoolAgent:
             "total_tokens": 0,
         }
         self._active_bg_tasks: list[asyncio.Task[Any]] = []
+        self._has_resumed: bool = False
 
         import wool.tools.base as base
         base.IS_RESTRICTED = config.restrict_workspace

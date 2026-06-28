@@ -35,7 +35,7 @@ from wool.utils.streaming import StreamPrinter
 def _print_banner(agent: WoolAgent) -> None:
     provider = agent.active_provider.name if agent.active_provider else "none"
     model = agent.active_model or "auto"
-    session = agent.config.active_session
+    session = agent.config.active_session or "default"
     n_tools = len(agent.tool_registry.list_tools())
     n_mcp = len(agent.mcp_manager.list_servers())
     n_mcp_tools = len(agent.mcp_manager.get_all_tools())

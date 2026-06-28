@@ -350,7 +350,7 @@
         <div class="feature-card fade-in">
             <div class="feature-icon">🔗</div>
             <h3>MCP Protocol</h3>
-            <p>Connect to any MCP server — stdio, HTTP/SSE, or Streamable HTTP. Full support for authentication headers and auto-reconnect on startup.</p>
+            <p>Connect to any MCP server — stdio, HTTP/SSE, or Streamable HTTP. Boots all connections <strong>in parallel</strong> for ultra-fast startup.</p>
         </div>
         <div class="feature-card fade-in">
             <div class="feature-icon">💬</div>
@@ -371,6 +371,11 @@
             <div class="feature-icon">🧠</div>
             <h3>Parallel Subagents</h3>
             <p>Delegate multiple tasks to independent sub-agents that run concurrently in the background. Results are collected automatically.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🛡️</div>
+            <h3>Secure Sandboxing</h3>
+            <p>Native kernel-level mount-namespace isolation confines the agent perfectly to your working directory. Toggleable via the settings menu.</p>
         </div>
         <div class="feature-card fade-in">
             <div class="feature-icon">📱</div>
@@ -454,6 +459,7 @@
         <div class="cmd-row fade-in"><span class="cmd-name">/session(s)</span><span class="cmd-desc">Open interactive session menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/new</span><span class="cmd-desc">Create and switch to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rename</span><span class="cmd-desc">Rename the current session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/settings</span><span class="cmd-desc">Open interactive settings menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/fork</span><span class="cmd-desc">Fork conversation to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rewind</span><span class="cmd-desc">Rewind history interactively</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">List all tools (built-in + MCP)</span></div>

@@ -57,7 +57,7 @@ Wool comes with powerful built-in tools that the AI can use autonomously:
 | `use_subagent` | Delegate tasks to parallel sub-agents for concurrent execution |
 
 ### 🔗 MCP Protocol Support
-Connect to **any MCP server** — stdio, HTTP/SSE, or Streamable HTTP transports. Full support for authentication headers.
+Connect to **any MCP server** — stdio, HTTP/SSE, or Streamable HTTP transports. Full support for authentication headers. Wool launches all connections **in parallel** via `asyncio.gather` for blazing fast boot times.
 
 ```bash
 # Local stdio server
@@ -81,6 +81,9 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 - **Parallel subagents** — delegate multiple tasks to run concurrently in the background
 - **Smart context tracking** — detailed token usage and context breakdown
 
+### 🛡️ Secure Workspace Sandboxing
+Native kernel-level mount-namespace sandboxing (`unshare`). Confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Zero virtualization overhead, zero leaks. Fully toggleable via the `/settings` menu.
+
 ### 📱 Cross-Platform
 Natively supports **all Linux distributions** and **Android Termux**. No hardcoded paths — dynamically adapts to your environment. Native Termux clipboard integration.
 
@@ -97,6 +100,7 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 | `/session(s)` | Open interactive session menu |
 | `/new [name]` | Create and switch to a new session |
 | `/rename <new_name>` | Rename the current session |
+| `/settings` | Open interactive settings menu (e.g., Workspace restriction) |
 | `/fork [name]` | Fork conversation to a new session |
 | `/rewind` | Interactively rewind history to a specific message |
 | `/tools` | List all available tools (built-in + MCP) |
@@ -151,7 +155,7 @@ wool/
 
 ## ⚙️ Requirements
 
-- **Python** ≥ 3.11
+- **Python** ≥ 3.11 (Fully typed & statically verified via `mypy` and `ruff`)
 - **Linux** or **Android Termux**
 - Dependencies: `httpx`, `aiofiles`, `pyperclip` (auto-installed)
 

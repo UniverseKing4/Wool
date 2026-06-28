@@ -410,11 +410,12 @@ class SlashCommandHandler:
             last_idx = -1
             while True:
                 files = {f.stem for f in sess_dir.glob("*.json")}
-                files.add(self.agent.config.active_session)
+                if self.agent.config.active_session:
+                    files.add(self.agent.config.active_session)
                 session_list = sorted(files)
 
                 result = run_session_menu(
-                    session_list, self.agent.config.active_session, initial_idx=last_idx
+                    session_list, self.agent.config.active_session or "", initial_idx=last_idx
                 )
                 if not result:
                     return False
