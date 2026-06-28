@@ -48,7 +48,6 @@ def _print_banner(agent: WoolAgent) -> None:
         f"  {dim('Provider:')} {green(provider)}  "
         f"{dim('│')}  {dim('Model:')} {cyan(model)}"
     )
-    print(f"  {dim('Session:')} {magenta(session)}")
 
     mcp_str = (
         f"{white(str(n_mcp))} {dim('servers')} {dim(f'({n_mcp_tools} tools)')}"
@@ -63,6 +62,7 @@ def _print_banner(agent: WoolAgent) -> None:
     import os
     cwd = os.getcwd()
     print(f"  {dim('Workspace:')} {cyan(cwd)}")
+    print(f"  {dim('Session:')} {magenta(session)}")
     print(f"  {dim('Type')} {yellow('/help')} {dim('for commands')}")
     print()
 
