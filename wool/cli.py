@@ -297,6 +297,7 @@ async def run_repl(resume: bool = False) -> None:
             has_reasoned = False
             transitioned = False
             last_chunk_type = None
+            cursor_at_bol = True
             start_time = time.time()
             iterator = agent.process_input(text).__aiter__()
             next_task: asyncio.Task[tuple[str, str]] | None = None
@@ -318,6 +319,10 @@ async def run_repl(resume: bool = False) -> None:
                         # Only show spinner if we haven't started, or if we just finished a tool.
                         # This prevents the spinner from corrupting the current line if the network lags mid-sentence.
                         if last_chunk_type in (None, "tool"):
+                            if not cursor_at_bol:
+                                sys.stdout.write("\r\n")
+                                sys.stdout.flush()
+                                cursor_at_bol = True
                             is_thinking.set()
 
                         inner_cancel_wait = asyncio.create_task(cancel_event.wait())
@@ -371,6 +376,9 @@ async def run_repl(resume: bool = False) -> None:
                         printer.finish()
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
+                        
+                        if chunk:
+                            cursor_at_bol = chunk.endswith("\n")
 
                         has_reasoned = False
                         transitioned = False
