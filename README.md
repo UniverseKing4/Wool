@@ -26,6 +26,9 @@ The installer automatically detects your OS, installs all dependencies (Python 3
 # Launch the agent
 wool
 
+# Update Wool to the latest version
+wool -u
+
 # Add your AI provider
 wool › /provider add openrouter https://openrouter.ai/api/v1 sk-or-xxxx
 
