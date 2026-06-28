@@ -60,6 +60,9 @@ def _print_banner(agent: WoolAgent) -> None:
         f"  {dim('Tools:')} {white(str(n_tools))} {dim('built-in')}  "
         f"{dim('│')}  {dim('MCP:')} {mcp_str}"
     )
+    import os
+    cwd = os.getcwd()
+    print(f"  {dim('Workspace:')} {cyan(cwd)}")
     print(f"  {dim('Type')} {yellow('/help')} {dim('for commands')}")
     print()
 
