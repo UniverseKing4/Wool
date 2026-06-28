@@ -81,8 +81,8 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 - **Parallel subagents** — delegate multiple tasks to run concurrently in the background
 - **Smart context tracking** — detailed token usage and context breakdown
 
-### 🛡️ Secure Workspace Sandboxing
-Native kernel-level mount-namespace sandboxing (`unshare`). Confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Zero virtualization overhead, zero leaks. Fully toggleable via the `/settings` menu.
+### 🛡️ Secure Workspace Restrictions
+Strict path validations and regex heuristics confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Fully toggleable via the `/settings` menu.
 
 ### 📱 Cross-Platform
 Natively supports **all Linux distributions** and **Android Termux**. No hardcoded paths — dynamically adapts to your environment. Native Termux clipboard integration.
