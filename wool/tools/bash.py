@@ -168,6 +168,12 @@ exec bash -c {shlex.quote(command)}
                     error=f"Command timed out after {timeout} seconds. Stderr: {stderr}",
                     metadata={"exit_code": -9},
                 )
+            except asyncio.CancelledError:
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                raise
 
             combined = stdout
             if stderr:

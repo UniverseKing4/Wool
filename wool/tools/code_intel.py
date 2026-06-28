@@ -209,7 +209,8 @@ class CodeIntelligence(Tool):
                 total_files += 1
                 try:
                     if fp.stat().st_size < 2 * 1024 * 1024:  # skip huge files
-                        total_lines += sum(1 for _ in open(fp, "rb"))
+                        with open(fp, "rb") as f:
+                            total_lines += sum(1 for _ in f)
                 except OSError:
                     pass
 
