@@ -65,6 +65,9 @@ class WoolAgent:
         }
         self._active_bg_tasks: list[asyncio.Task[Any]] = []
 
+        import wool.tools.base as base
+        base.IS_RESTRICTED = config.restrict_workspace
+
         self._setup_tools()
         self._setup_providers()
         self.load_session()

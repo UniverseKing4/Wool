@@ -11,7 +11,7 @@ from typing import Any
 
 import aiofiles
 
-from wool.tools.base import Tool, ToolParameter, ToolResult
+from wool.tools.base import Tool, ToolParameter, ToolResult, check_path_allowed
 
 MAX_FILE_LINES = 10_000
 MAX_DIR_ENTRIES = 1_000
@@ -77,6 +77,11 @@ class FileSystemRead(Tool):
             return ToolResult(success=False, output="", error="Path is required.")
 
         p = Path(path_str).resolve()
+
+        try:
+            check_path_allowed(p)
+        except PermissionError as e:
+            return ToolResult(success=False, output="", error=str(e))
 
         if mode == "file":
             return await self._read_file(p, kwargs)
@@ -175,7 +180,7 @@ class FileSystemRead(Tool):
             )
         recursive = kw.get("recursive", True)
         flag = "-rn" if recursive else "-n"
-        cmd = ["grep", flag, "--color=never", "-I", "--include=*", pattern, str(p)]
+        cmd = ["grep", flag, "--color=never", "-I", "--include=*", "--", pattern, str(p)]
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,

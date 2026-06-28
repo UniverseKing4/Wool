@@ -8,7 +8,7 @@ from typing import Any
 
 import aiofiles
 
-from wool.tools.base import Tool, ToolParameter, ToolResult
+from wool.tools.base import Tool, ToolParameter, ToolResult, check_path_allowed
 
 # Paths that must never be written to.
 _FORBIDDEN_PREFIXES = ("/proc", "/sys", "/dev", "/boot/efi")
@@ -80,6 +80,11 @@ class FileSystemWrite(Tool):
             return ToolResult(success=False, output="", error="Path is required.")
 
         p = Path(path_str).resolve()
+
+        try:
+            check_path_allowed(p)
+        except PermissionError as e:
+            return ToolResult(success=False, output="", error=str(e))
 
         # Safety: block forbidden paths.
         for prefix in _FORBIDDEN_PREFIXES:

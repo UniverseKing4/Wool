@@ -5,6 +5,22 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
+from pathlib import Path
+
+RESTRICTED_DIR = Path.cwd().resolve()
+IS_RESTRICTED = True
+
+def check_path_allowed(p: Path | str) -> None:
+    if not IS_RESTRICTED:
+        return
+    try:
+        resolved = Path(p).resolve()
+        if not resolved.is_relative_to(RESTRICTED_DIR):
+            raise PermissionError(f"Access to path outside restricted workspace ({RESTRICTED_DIR}) is strictly forbidden.")
+    except Exception as e:
+        if isinstance(e, PermissionError):
+            raise
+        raise PermissionError(f"Invalid path: {p}")
 
 
 @dataclass

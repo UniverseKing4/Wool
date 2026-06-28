@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from wool.tools.base import Tool, ToolParameter, ToolResult
+from wool.tools.base import Tool, ToolParameter, ToolResult, check_path_allowed
 
 # Patterns for common symbol definitions across languages.
 _SYMBOL_PATTERNS: dict[str, str] = {
@@ -99,6 +99,13 @@ class CodeIntelligence(Tool):
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         action: str = kwargs.get("action", "")
+        
+        path_str: str = kwargs.get("path", ".")
+        try:
+            check_path_allowed(Path(path_str).resolve())
+        except PermissionError as e:
+            return ToolResult(success=False, output="", error=str(e))
+            
         dispatch = {
             "search_symbols": self._search_symbols,
             "lookup_symbol": self._lookup_symbol,
@@ -281,6 +288,7 @@ class CodeIntelligence(Tool):
             "-rnI",
             "--color=never",
             "-E",
+            "--",
             pattern,
             str(Path(path).resolve()),
         ]

@@ -10,9 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shlex
 from typing import Any
 
 import httpx
+
+from wool.tools.base import RESTRICTED_DIR
+import wool.tools.base as base
 
 
 class MCPClient:
@@ -59,15 +63,37 @@ class MCPClient:
     async def _connect_stdio(self) -> None:
         assert self.command is not None
         import os
-
         env = {**os.environ, **(self.env or {})}
-        self._process = await asyncio.create_subprocess_exec(
-            *self.command,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env,
-        )
+        if base.IS_RESTRICTED:
+            import shlex
+            cmd_str = " ".join(shlex.quote(arg) for arg in self.command)
+            script = f'''
+RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
+mount --bind "$RESTRICTED" /mnt
+if [ -d "/workspaces" ]; then mount -t tmpfs tmpfs "/workspaces"; fi
+if [ -d "/home" ]; then mount -t tmpfs tmpfs "/home"; fi
+if [ -d "/root" ]; then mount -t tmpfs tmpfs "/root"; fi
+mkdir -p "$RESTRICTED"
+mount --bind /mnt "$RESTRICTED"
+umount /mnt
+cd "$RESTRICTED"
+exec {cmd_str}
+'''
+            self._process = await asyncio.create_subprocess_exec(
+                "unshare", "-m", "-r", "bash", "-c", script,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+            )
+        else:
+            self._process = await asyncio.create_subprocess_exec(
+                *self.command,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+            )
         # Start background reader.
         self._reader_task = asyncio.create_task(self._read_loop())
 

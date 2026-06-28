@@ -35,6 +35,7 @@ class WoolConfig:
     active_session: str | None = None
     last_session: str | None = None
     mcp_servers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    restrict_workspace: bool = True
 
     # ── persistence ───────────────────────────────────────────────────────
 
@@ -63,6 +64,7 @@ class WoolConfig:
             active_session=raw.get("active_session"),
             last_session=raw.get("last_session"),
             mcp_servers=raw.get("mcp_servers", {}),
+            restrict_workspace=raw.get("restrict_workspace", True),
         )
 
     def save(self) -> None:
@@ -75,6 +77,7 @@ class WoolConfig:
             "active_session": self.active_session,
             "last_session": self.last_session,
             "mcp_servers": self.mcp_servers,
+            "restrict_workspace": self.restrict_workspace,
         }
         temp_path = CONFIG_FILE.with_suffix(".tmp")
         temp_path.write_text(

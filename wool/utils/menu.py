@@ -251,3 +251,88 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
 
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def run_settings_menu(config) -> None:
+    """
+    Renders an interactive menu for settings.
+    """
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+
+    selected_idx = 0
+    # Currently only one setting
+    options = ["restrict_workspace"]
+
+    print(f"\n  {bold(cyan('Settings:'))}")
+
+    def _render(sel: int) -> list[str]:
+        lines = []
+        for i, opt in enumerate(options):
+            prefix = "❯" if i == sel else " "
+            if opt == "restrict_workspace":
+                val_str = green("ON") if config.restrict_workspace else red("OFF")
+                name_str = "Workspace restriction (current folder only)"
+            else:
+                val_str = "?"
+                name_str = opt
+            
+            color_prefix = cyan(prefix) if i == sel else prefix
+            colored_name = cyan(name_str) if i == sel else white(name_str)
+            if i == sel:
+                colored_name = bold(colored_name)
+            
+            lines.append(f"  {color_prefix} {colored_name}: [{val_str}]")
+
+        lines.append("")
+        lines.append(f"  {dim('↑/↓: move   Enter: toggle   q/Esc: exit')}")
+        return lines
+
+    def _draw():
+        lines = _render(selected_idx)
+        for line in lines:
+            sys.stdout.write(f"\r\033[K{line}\r\n")
+        sys.stdout.flush()
+        return len(lines)
+
+    try:
+        tty.setraw(sys.stdin.fileno())
+        num_lines = _draw()
+
+        while True:
+            ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+
+            if ch == "\x03" or ch.lower() == "q":
+                sys.stdout.write("\r\033[K\r\n")
+                return
+
+            elif ch == "\r" or ch == "\n":
+                opt = options[selected_idx]
+                if opt == "restrict_workspace":
+                    config.restrict_workspace = not config.restrict_workspace
+                    config.save()
+                    # Also update the global flag in base.py
+                    import wool.tools.base as base
+                    base.IS_RESTRICTED = config.restrict_workspace
+                
+                # Redraw
+                sys.stdout.write(f"\r\033[{num_lines}A")
+                num_lines = _draw()
+
+            elif ch == "\x1b":
+                r, _, _ = select.select([fd], [], [], 0.05)
+                if r:
+                    seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+                    if seq in ("[A", "OA"):  # Up
+                        selected_idx = max(0, selected_idx - 1)
+                    elif seq in ("[B", "OB"):  # Down
+                        selected_idx = min(len(options) - 1, selected_idx + 1)
+                else:
+                    sys.stdout.write("\r\033[K\r\n")
+                    return
+
+                sys.stdout.write(f"\r\033[{num_lines}A")
+                num_lines = _draw()
+
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

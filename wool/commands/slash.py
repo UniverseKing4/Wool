@@ -74,6 +74,7 @@ class SlashCommandHandler:
             "/exit": self._exit,
             "/quit": self._exit,
             "/compact": self._compact,
+            "/settings": self._settings,
         }
 
         handler = dispatch.get(cmd)
@@ -108,6 +109,7 @@ class SlashCommandHandler:
             ("/compact", "Compact history (keep system + last 4 turns)"),
             ("/status", "Show current session status"),
             ("/copy", "Copy the last AI response to clipboard"),
+            ("/settings", "Open interactive settings menu"),
             ("/exit, /quit", "Exit Wool"),
         ]
         for name, desc in cmds:
@@ -758,6 +760,11 @@ If the goal IS finished, output `<FINISHED>` and explain what you accomplished.
         return False
 
     # ── /compact ──────────────────────────────────────────────────────────
+
+    async def _settings(self, _args: str) -> bool:
+        from wool.utils.menu import run_settings_menu
+        run_settings_menu(self.agent.config)
+        return False
 
     async def _compact(self, _args: str) -> bool:
         msgs = self.agent.messages
