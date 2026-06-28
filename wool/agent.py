@@ -350,7 +350,7 @@ class WoolAgent:
                 tool = self.tool_registry.get(tc.name)
                 
                 async def stream_cb(chunk: str):
-                    await queue.put(("tool_stream", tc.name, chunk))
+                    await queue.put(("tool_stream", tc.id, chunk))
                     
                 if is_streaming:
                     args["__stream_callback"] = stream_cb
@@ -484,13 +484,18 @@ class WoolAgent:
             
             stream_filter = IndentFilter(f"  {dim('│')} ")
             completed_results: dict[str, str] = {}
+            partial_streams: dict[str, list[str]] = {}
             pending_count = len(tasks)
+            exc_raised = None
             try:
                 while pending_count > 0:
                     q_item = await queue.get()
                     msg_type = q_item[0]
                     if msg_type == "tool_stream":
-                        _, t_name, chunk = q_item  # type: ignore
+                        _, t_id, chunk = q_item  # type: ignore
+                        if t_id not in partial_streams:
+                            partial_streams[t_id] = []
+                        partial_streams[t_id].append(chunk)
                         yield "tool_stream", stream_filter.process(chunk)
                     elif msg_type == "tool_done":
                         _, tc_id, tc, args, result_text = q_item  # type: ignore
@@ -526,10 +531,14 @@ class WoolAgent:
                                 "tool",
                                 f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n",
                             )
+            except BaseException as e:
+                exc_raised = e
             finally:
                 for t in tasks.values():
                     if not t.done():
                         t.cancel()
+
+            is_cancelled = isinstance(exc_raised, (asyncio.CancelledError, KeyboardInterrupt))
 
             # 3. Merge expanded tool results back into original tool call IDs
             for original_tc in original_pending_tool_calls:
@@ -537,12 +546,22 @@ class WoolAgent:
                     expanded_ids = expansion_map[original_tc.id]
                     combined_result = []
                     for i, exp_id in enumerate(expanded_ids):
+                        res = completed_results.get(exp_id)
+                        if res is None:
+                            res = "".join(partial_streams.get(exp_id, []))
+                            if is_cancelled:
+                                res += "\n\n[Tool execution cancelled by user]"
                         combined_result.append(
-                            f"--- Subagent {i + 1} Output ---\n{completed_results.get(exp_id, '')}"
+                            f"--- Subagent {i + 1} Output ---\n{res}"
                         )
                     final_result_text = "\n\n".join(combined_result)
                 else:
-                    final_result_text = completed_results.get(original_tc.id, "")
+                    res_opt = completed_results.get(original_tc.id)
+                    if res_opt is None:
+                        res_opt = "".join(partial_streams.get(original_tc.id, []))
+                        if is_cancelled:
+                            res_opt += "\n\n[Tool execution cancelled by user]"
+                    final_result_text = res_opt
 
                 self.messages.append(
                     ChatMessage(
@@ -552,6 +571,11 @@ class WoolAgent:
                         name=original_tc.name,
                     )
                 )
+
+            self.save_session()
+            
+            if exc_raised:
+                raise exc_raised
 
             # Force Gemini to continue the task or summarize, preventing 0-token silent exits
             self.messages.append(
