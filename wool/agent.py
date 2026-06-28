@@ -358,11 +358,13 @@ class WoolAgent:
                 if tool:
                     try:
                         result = await tool.execute(**args)
-                        result_text = (
-                            result.output
-                            if result.success
-                            else f"Error: {result.error or result.output}"
-                        )
+                        if result.success:
+                            result_text = result.output
+                        else:
+                            if result.error and result.output:
+                                result_text = f"Error: {result.error}\n\nOutput:\n{result.output}"
+                            else:
+                                result_text = f"Error: {result.error or result.output}"
                     except Exception as exc:
                         result_text = f"Tool execution error: {exc}"
                 else:
@@ -392,7 +394,13 @@ class WoolAgent:
                         if tool:
                             try:
                                 result = await tool.execute(**bg_args)
-                                bg_res = result.output if result.success else f"Error: {result.error or result.output}"
+                                if result.success:
+                                    bg_res = result.output
+                                else:
+                                    if result.error and result.output:
+                                        bg_res = f"Error: {result.error}\n\nOutput:\n{result.output}"
+                                    else:
+                                        bg_res = f"Error: {result.error or result.output}"
                             except Exception as e:
                                 bg_res = f"Error: {e}"
                         else:
@@ -498,9 +506,10 @@ class WoolAgent:
                             if not stream_filter.needs_prefix:
                                 yield "tool", "\r\n"
                             
-                            # if error that might not be in stream, append it!
-                            if result_text.startswith("Error: Command timed out") or result_text.startswith("Tool execution error"):
-                                yield "tool", f"  {dim('│')} {red(result_text)}\r\n"
+                            # We need to print errors that were NOT in the stream (or exit codes)
+                            if result_text.startswith("Error:"):
+                                error_msg = result_text.split("\n\nOutput:\n")[0].strip()
+                                yield "tool", f"  {dim('│')} {red(error_msg)}\r\n"
                             yield "tool", f"  {dim('└──────────────────────────────────────────────────')}\r\n\r\n"
                         else:
                             # Show immersive full output with ANSI borders for the result
