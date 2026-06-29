@@ -387,6 +387,16 @@
             <h3>Ultra-Lightweight</h3>
             <p>Pure Python. No TUI frameworks, no curses, no heavy dependencies. Just a clean REPL with ANSI colours. ~30 source files total.</p>
         </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🛑</div>
+            <h3>Safe Cancellation</h3>
+            <p>Hit Escape (or Ctrl+C) to gracefully cancel active tool executions or LLM generation. Partial tool results are safely captured and retained.</p>
+        </div>
+        <div class="feature-card fade-in">
+            <div class="feature-icon">🧹</div>
+            <h3>Auto Cleanup</h3>
+            <p>Wool keeps your workspace completely clean. Ghost sessions with no messages are perfectly scrubbed away without leaving a trace.</p>
+        </div>
     </div>
 </section>
 
@@ -454,9 +464,10 @@
     <div class="commands-grid">
         <div class="cmd-row fade-in"><span class="cmd-name">wool -u</span><span class="cmd-desc">Update Wool to the latest version</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/help</span><span class="cmd-desc">Show all available commands</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/provider</span><span class="cmd-desc">Manage AI providers (list, add, remove, switch)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/provider</span><span class="cmd-desc">View or manage AI providers</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/providers</span><span class="cmd-desc">Open interactive provider selection menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/model</span><span class="cmd-desc">View or change the active model</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/models</span><span class="cmd-desc">List all models from the provider</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/models</span><span class="cmd-desc">Open interactive model selection menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/session(s)</span><span class="cmd-desc">Open interactive session menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/new</span><span class="cmd-desc">Create and switch to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rename</span><span class="cmd-desc">Rename the current session</span></div>

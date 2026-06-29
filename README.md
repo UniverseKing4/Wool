@@ -83,6 +83,8 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 - **Goal mode** — set a goal and let Wool work autonomously until complete
 - **Parallel subagents** — delegate multiple tasks to run concurrently in the background
 - **Smart context tracking** — detailed token usage and context breakdown
+- **Graceful cancellation** — hit Escape to safely abort and capture partial tool output
+- **Auto-cleanup** — ghost sessions with no messages are perfectly scrubbed to keep workspaces clean
 
 ### 🛡️ Secure Workspace Restrictions
 Strict path validations and regex heuristics confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Fully toggleable via the `/settings` menu.
@@ -97,9 +99,10 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 | Command | Description |
 |---------|-------------|
 | `/help` | Show all available commands |
-| `/provider list\|add\|remove\|switch` | Manage AI providers |
+| `/provider [list\|add\|remove\|switch]` | View or manage AI providers |
+| `/providers` | Open interactive provider selection menu |
 | `/model [list\|switch <id>]` | View or change the active model |
-| `/models` | List all available models from the provider |
+| `/models` | Open interactive model selection menu |
 | `/session(s)` | Open interactive session menu |
 | `/new [name]` | Create and switch to a new session |
 | `/rename <new_name>` | Rename the current session |
