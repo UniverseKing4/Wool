@@ -127,8 +127,7 @@ exec bash -c {shlex.quote(command)}
                     )
                 else:
                     # Graceful degradation for Termux/environments without unshare capabilities
-                    # We output a warning to stderr so the agent/user knows it's softly restricted.
-                    fallback_cmd = f"echo 'Warning: Strict sandboxing unavailable. Running softly restricted.' >&2; cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}"
+                    fallback_cmd = f"cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}"
                     proc = await asyncio.create_subprocess_exec(
                         "bash",
                         "-c",
