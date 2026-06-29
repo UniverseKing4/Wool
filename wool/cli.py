@@ -147,7 +147,6 @@ async def run_repl(resume: bool = False) -> None:
             except Exception as e:
                 print(f"  {red('✗')} Failed to auto-connect MCP '{name}': {e}")
                 
-        import asyncio
         tasks = [connect_mcp(name, cfg) for name, cfg in config.mcp_servers.items()]
         await asyncio.gather(*tasks)
         
@@ -296,7 +295,7 @@ async def run_repl(resume: bool = False) -> None:
         tools_used = 0
 
         async def _consume() -> None:
-            nonlocal printer, tools_used
+            nonlocal tools_used
             reasoning_printer = StreamPrinter(base_style="\033[2m\033[90m")
             has_reasoned = False
             transitioned = False
@@ -367,6 +366,8 @@ async def run_repl(resume: bool = False) -> None:
                             transitioned = True
                         printer.print_chunk(chunk)
                     elif chunk_type == "reasoning":
+                        if transitioned:
+                            transitioned = False
                         has_reasoned = True
                         reasoning_printer.print_chunk(chunk)
                     elif chunk_type == "tool_start":

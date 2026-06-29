@@ -25,6 +25,7 @@ from wool.tools.bash import ExecuteBash
 from wool.tools.code_intel import CodeIntelligence
 from wool.tools.fs_read import FileSystemRead
 from wool.tools.fs_write import FileSystemWrite
+from wool.tools.multi_tool import MultiToolUse
 from wool.tools.subagent import SubagentDelegation
 from wool.tools.web_fetch import WebFetch
 from wool.tools.web_search import WebSearch
@@ -40,8 +41,8 @@ Guidelines:
 - When using tools, briefly explain what you are doing.
 - After receiving tool results, you MUST ALWAYS provide a final text response summarising the findings or outcome. Never leave the user hanging without a final response, even if the tool output itself was detailed.
 - Respect Linux file permissions and system security.
-- You FULLY support parallel tool execution. If you need to perform multiple independent tasks (e.g. searching multiple files, spawning multiple subagents), you MUST invoke all of them concurrently in a single step!
-- CRITICAL: You must use the native JSON tool calling format provided by the API. DO NOT use text-based tags like `<call:function{}>` to execute tools. Emit multiple standard JSON tool calls in your response natively.
+- You FULLY support parallel tool execution. If you need to perform multiple independent tasks (e.g. searching multiple files, spawning multiple subagents), you MUST invoke all of them concurrently in a single step! To bypass system proxy limits, ALWAYS use the `multi_tool_use` tool when you need to call multiple tools at once.
+- CRITICAL: Do NOT attempt to run multiple tools concurrently by chaining `call:` tags together (e.g. `call:func_1{}call:func_2{}`). This will crash the proxy! You MUST use the `multi_tool_use` tool with a JSON array of tool calls.
 """
 
 MAX_TOOL_ITERATIONS = 25
@@ -84,6 +85,7 @@ class WoolAgent:
             WebFetch(),
             WebSearch(),
             SubagentDelegation(),
+            MultiToolUse(),
         ):
             self.tool_registry.register(tool)
 
@@ -242,6 +244,16 @@ class WoolAgent:
 
             # If there are no tool calls, check for background tasks.
             if not pending_tool_calls:
+                if not accumulated_text.strip() and accumulated_reasoning.strip():
+                    self.messages.append(
+                        ChatMessage(
+                            role="user",
+                            content="System Warning: Your response was terminated prematurely after generating thoughts. Please provide your actual text response or tool call."
+                        )
+                    )
+                    yield "text", f"\n  {dim('(Output interrupted after thinking. Auto-retrying...)')}\n"
+                    continue
+
                 if hasattr(self, "_active_bg_tasks") and self._active_bg_tasks:
                     bg_tasks = self._active_bg_tasks
                     self._active_bg_tasks = []
@@ -327,6 +339,37 @@ class WoolAgent:
                                 )
                             expansion_map[tc.id] = expanded_ids
                             continue
+                    except Exception:
+                        pass
+                elif tc.name == "multi_tool_use":
+                    try:
+                        args = json.loads(tc.arguments) if tc.arguments else {}
+                        sub_calls = args.get("tool_calls", [])
+                        if sub_calls and isinstance(sub_calls, list):
+                            expanded_ids = []
+                            for i, sub in enumerate(sub_calls):
+                                if isinstance(sub, dict) and "name" in sub and "arguments" in sub:
+                                    expanded_id = f"{tc.id}_{i}"
+                                    expanded_ids.append(expanded_id)
+                                    # Handle both string arguments and nested dict arguments
+                                    sub_args = sub["arguments"]
+                                    if isinstance(sub_args, dict):
+                                        sub_args = json.dumps(sub_args)
+                                        
+                                    sub_name = str(sub["name"])
+                                    if sub_name.startswith("default_api:"):
+                                        sub_name = sub_name[12:]
+                                        
+                                    expanded_tool_calls.append(
+                                        ToolCall(
+                                            id=expanded_id,
+                                            name=sub_name,
+                                            arguments=sub_args,
+                                        )
+                                    )
+                            if expanded_ids:
+                                expansion_map[tc.id] = expanded_ids
+                                continue
                     except Exception:
                         pass
                 expanded_tool_calls.append(tc)
