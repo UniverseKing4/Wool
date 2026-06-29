@@ -136,6 +136,12 @@ class SlashCommandHandler:
             if p:
                 self.agent.active_provider = p
                 self.agent.config.active_provider = selected
+                
+                p_config = self.agent.config.providers.get(selected)
+                if p_config and p_config.default_model:
+                    self.agent.active_model = p_config.default_model
+                    self.agent.config.active_model = p_config.default_model
+                
                 self.agent.config.save()
                 success(f"Switched to provider '{selected}'.")
         return False
@@ -278,10 +284,12 @@ class SlashCommandHandler:
         model_ids = [m.id for m in models]
         selected = run_list_menu("Models:", model_ids, active_model)
         if selected and selected != active_model:
+            self.agent.active_model = selected
+            self.agent.config.active_model = selected
             if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
                 self.agent.config.providers[self.agent.active_provider.name].default_model = selected
                 self.agent.config.save()
-                success(f"Switched to model '{selected}'.")
+            success(f"Switched to model '{selected}'.")
         return False
 
     async def _model(self, args: str) -> bool:
