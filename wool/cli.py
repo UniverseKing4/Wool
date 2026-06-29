@@ -482,5 +482,15 @@ async def run_repl(resume: bool = False) -> None:
 
     # ── shutdown ──
     print(f"\n  {dim('← Shutting down…')}")
+    
+    # Clean up empty sessions on exit
+    if not agent.messages and not getattr(agent, "_history_cleared_explicitly", False):
+        path = agent.get_session_path()
+        if path.exists():
+            path.unlink()
+        # If active_session is still pointing to the empty one, revert it
+        if config.active_session == path.stem:
+            config.active_session = config.last_session
+            config.save()
     await agent.shutdown()
     print(f"  {dim('← Goodbye. 🐑')}\n")

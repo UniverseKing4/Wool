@@ -91,9 +91,10 @@ class SlashCommandHandler:
         print()
         cmds = [
             ("/help", "Show this help message"),
-            ("/provider(s) list|add|remove|switch", "Manage AI providers"),
+            ("/provider [list|add|remove|switch]", "View or manage AI providers"),
+            ("/providers", "Open interactive provider selection menu"),
             ("/model [list|switch <id>]", "View or change the active model"),
-            ("/models", "List available models for the active provider"),
+            ("/models", "Open interactive model selection menu"),
             ("/session(s)", "Open interactive session menu"),
             ("/new [name]", "Create and switch to a new session"),
             ("/rename <new_name>", "Rename the current session"),
