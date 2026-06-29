@@ -8,6 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import readline
+try:
+    readline.parse_and_bind("set enable-bracketed-paste on")
+except Exception:
+    pass
 import signal
 import sys
 import termios
