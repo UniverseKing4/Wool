@@ -82,56 +82,80 @@ class ExecuteBash(Tool):
 
         try:
             if base.IS_RESTRICTED:
-                # Check if unshare is supported (Termux/Android often lacks it)
-                unshare_supported = False
+                # 1. Test if unshare is supported natively (Linux)
+                import subprocess
+                unshare_works = False
                 try:
-                    import subprocess
                     ret = subprocess.run(["unshare", "-m", "-r", "true"], capture_output=True)
                     if ret.returncode == 0:
-                        unshare_supported = True
+                        unshare_works = True
                 except Exception:
                     pass
 
-                if unshare_supported:
+                if unshare_works:
+                    # Perfect Linux Chroot Sandbox via Unshare
                     script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
-PARENT=$(dirname "$RESTRICTED")
+JAIL=$(mktemp -d)
+mount -t tmpfs tmpfs "$JAIL"
 
-# Overmount visible siblings to prevent path traversal
-for item in "$PARENT"/*; do
-    if [ "$item" = "$PARENT/*" ]; then continue; fi
-    if [ "$item" != "$RESTRICTED" ] && [ -d "$item" ]; then
-        mount -t tmpfs tmpfs "$item" 2>/dev/null || true
-    elif [ "$item" != "$RESTRICTED" ] && [ -f "$item" ]; then
-        mount --bind /dev/null "$item" 2>/dev/null || true
+for dir in /bin /etc /lib /lib32 /lib64 /libx32 /opt /sbin /usr /var; do
+    if [ -d "$dir" ]; then
+        mkdir -p "$JAIL$dir"
+        mount --rbind "$dir" "$JAIL$dir"
     fi
 done
 
-# For directories safely outside /home, apply strict parent overmount
-if [[ "$PARENT" != /home* ]] && [[ "$PARENT" != /root* ]]; then
-    mount --bind "$RESTRICTED" /mnt
-    mount -t tmpfs tmpfs "$PARENT" 2>/dev/null || true
-    mkdir -p "$RESTRICTED"
-    mount --bind /mnt "$RESTRICTED" 2>/dev/null || true
-    umount /mnt 2>/dev/null || true
-fi
+for dir in /dev /proc /sys /tmp; do
+    if [ -d "$dir" ]; then
+        mkdir -p "$JAIL$dir"
+        mount --rbind "$dir" "$JAIL$dir" 2>/dev/null || true
+    fi
+done
 
-cd "$RESTRICTED"
-exec bash -c {shlex.quote(command)}
+mkdir -p "$JAIL/workspace"
+mount --rbind "$RESTRICTED" "$JAIL/workspace"
+
+cd "$JAIL/workspace"
+exec chroot "$JAIL" /bin/bash -c "cd /workspace && exec bash -c {shlex.quote(command)}"
 '''
                     proc = await asyncio.create_subprocess_exec(
                         "unshare", "-m", "-r", "bash", "-c", script,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
-                        start_new_session=True,  # own process group for clean kill
+                        start_new_session=True,
                     )
                 else:
-                    # Graceful degradation for Termux/environments without unshare capabilities
-                    fallback_cmd = f"cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}"
+                    # 2. Perfect Android/Termux (or missing unshare) Sandbox via PROOT
+                    # Auto-install proot if missing
+                    try:
+                        subprocess.run(["proot", "--version"], capture_output=True, check=True)
+                    except (FileNotFoundError, subprocess.CalledProcessError):
+                        # Install proot
+                        if os.path.exists("/data/data/com.termux/files/usr/bin/pkg"):
+                            subprocess.run(["pkg", "install", "-y", "proot"], capture_output=True)
+                        elif os.path.exists("/usr/bin/apt-get"):
+                            subprocess.run(["apt-get", "update"], capture_output=True)
+                            subprocess.run(["apt-get", "install", "-y", "proot"], capture_output=True)
+                    
+                    # Proot jail script
+                    prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
+                    if os.path.exists(prefix):
+                        # Termux environment
+                        script = f'''
+RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
+JAIL=$(mktemp -d)
+exec proot -r "$JAIL" -b {prefix}:{prefix} -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
+'''
+                    else:
+                        # Standard Linux fallback if unshare fails but proot is installed
+                        script = f'''
+RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
+JAIL=$(mktemp -d)
+exec proot -r "$JAIL" -b /bin:/bin -b /usr:/usr -b /lib:/lib -b /lib64:/lib64 -b /etc:/etc -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
+'''
                     proc = await asyncio.create_subprocess_exec(
-                        "bash",
-                        "-c",
-                        fallback_cmd,
+                        "bash", "-c", script,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                         start_new_session=True,
