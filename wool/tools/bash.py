@@ -126,14 +126,10 @@ exec bash -c {shlex.quote(command)}
                         start_new_session=True,  # own process group for clean kill
                     )
                 else:
-                    # Graceful degradation for Termux/environments without unshare
-                    proc = await asyncio.create_subprocess_exec(
-                        "bash",
-                        "-c",
-                        f"cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        start_new_session=True,
+                    return ToolResult(
+                        success=False,
+                        output="",
+                        error="Workspace restriction is ON, but your system (e.g. Android/Termux) lacks 'unshare' support required for secure sandboxing. Bash execution is blocked. To run bash commands, disable workspace restriction in /settings."
                     )
             else:
                 proc = await asyncio.create_subprocess_exec(
