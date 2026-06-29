@@ -142,11 +142,18 @@ exec bash -c {shlex.quote(command)}
                     # Proot jail script
                     prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
                     if os.path.exists(prefix):
-                        # Termux environment
+                        # Termux environment requires Android system paths for the linker (linker64)
                         script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
 JAIL=$(mktemp -d)
-exec proot -r "$JAIL" -b {prefix}:{prefix} -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
+# Bind essential Android system paths for Termux binaries
+ANDROID_BINDS=""
+for d in /system /apex /vendor /linkerconfig /bionic; do
+    if [ -d "$d" ]; then
+        ANDROID_BINDS="$ANDROID_BINDS -b $d:$d"
+    fi
+done
+exec proot -r "$JAIL" -b {prefix}:{prefix} $ANDROID_BINDS -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
 '''
                     else:
                         # Standard Linux fallback if unshare fails but proot is installed
