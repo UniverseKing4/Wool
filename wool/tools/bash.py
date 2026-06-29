@@ -93,31 +93,32 @@ class ExecuteBash(Tool):
                     pass
 
                 if unshare_works:
-                    # Perfect Linux Chroot Sandbox via Unshare
+                    # Restore original Linux sandbox behavior requested by user
                     script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
-JAIL=$(mktemp -d)
-mount -t tmpfs tmpfs "$JAIL"
+PARENT=$(dirname "$RESTRICTED")
 
-for dir in /bin /etc /lib /lib32 /lib64 /libx32 /opt /sbin /usr /var; do
-    if [ -d "$dir" ]; then
-        mkdir -p "$JAIL$dir"
-        mount --rbind "$dir" "$JAIL$dir"
+# Overmount visible siblings to prevent path traversal
+for item in "$PARENT"/*; do
+    if [ "$item" = "$PARENT/*" ]; then continue; fi
+    if [ "$item" != "$RESTRICTED" ] && [ -d "$item" ]; then
+        mount -t tmpfs tmpfs "$item" 2>/dev/null || true
+    elif [ "$item" != "$RESTRICTED" ] && [ -f "$item" ]; then
+        mount --bind /dev/null "$item" 2>/dev/null || true
     fi
 done
 
-for dir in /dev /proc /sys /tmp; do
-    if [ -d "$dir" ]; then
-        mkdir -p "$JAIL$dir"
-        mount --rbind "$dir" "$JAIL$dir" 2>/dev/null || true
-    fi
-done
+# For directories safely outside /home, apply strict parent overmount
+if [[ "$PARENT" != /home* ]] && [[ "$PARENT" != /root* ]]; then
+    mount --bind "$RESTRICTED" /mnt
+    mount -t tmpfs tmpfs "$PARENT" 2>/dev/null || true
+    mkdir -p "$RESTRICTED"
+    mount --bind /mnt "$RESTRICTED" 2>/dev/null || true
+    umount /mnt 2>/dev/null || true
+fi
 
-mkdir -p "$JAIL/workspace"
-mount --rbind "$RESTRICTED" "$JAIL/workspace"
-
-cd "$JAIL/workspace"
-exec chroot "$JAIL" /bin/bash -c "cd /workspace && exec bash -c {shlex.quote(command)}"
+cd "$RESTRICTED"
+exec bash -c {shlex.quote(command)}
 '''
                     proc = await asyncio.create_subprocess_exec(
                         "unshare", "-m", "-r", "bash", "-c", script,
