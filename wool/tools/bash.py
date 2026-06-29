@@ -184,14 +184,33 @@ exec proot -r "$JAIL" -b /bin:/bin -b /usr:/usr -b /lib:/lib -b /lib64:/lib64 -b
             stderr_chunks: list[str] = []
 
             async def read_stream(stream: asyncio.StreamReader, chunks_list: list[str]) -> None:
+                buffer = ""
                 while True:
                     chunk = await stream.read(1024)
                     if not chunk:
+                        if buffer:
+                            buffer = re.sub(r"(?im)^.*linkerconfig/ld\.config\.txt.*$\n?", "", buffer)
+                            if buffer:
+                                chunks_list.append(buffer)
+                                if stream_callback:
+                                    await stream_callback(buffer)
                         break
+                    
                     text = chunk.decode(errors="replace")
-                    chunks_list.append(text)
-                    if stream_callback:
-                        await stream_callback(text)
+                    buffer += text
+                    
+                    if "\n" in buffer:
+                        lines = buffer.split("\n")
+                        complete_lines = lines[:-1]
+                        buffer = lines[-1]
+                        
+                        output_text = "\n".join(complete_lines) + "\n"
+                        output_text = re.sub(r"(?im)^.*linkerconfig/ld\.config\.txt.*$\n?", "", output_text)
+                        
+                        if output_text:
+                            chunks_list.append(output_text)
+                            if stream_callback:
+                                await stream_callback(output_text)
 
             assert proc.stdout is not None
             assert proc.stderr is not None
