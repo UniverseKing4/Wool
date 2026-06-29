@@ -208,13 +208,13 @@ exec proot -r "$JAIL" -b /bin:/bin -b /usr:/usr -b /lib:/lib -b /lib64:/lib64 -b
                 stderr = "".join(stderr_chunks)
                 
                 # Filter out harmless Android linker warnings in Termux proot sandbox
-                stderr = re.sub(r"WARNING: linker:.*?\n?", "", stderr).strip()
+                stderr = re.sub(r"(?i).*failed to find generated linker configuration.*?\n?", "", stderr).strip()
                 
                 await proc.wait()
             except asyncio.TimeoutError:
                 stdout = "".join(stdout_chunks)
                 stderr = "".join(stderr_chunks)
-                stderr = re.sub(r"WARNING: linker:.*?\n?", "", stderr).strip()
+                stderr = re.sub(r"(?i).*failed to find generated linker configuration.*?\n?", "", stderr).strip()
                 # Terminate the process group to kill all descendants
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
