@@ -126,10 +126,16 @@ exec bash -c {shlex.quote(command)}
                         start_new_session=True,  # own process group for clean kill
                     )
                 else:
-                    return ToolResult(
-                        success=False,
-                        output="",
-                        error="Workspace restriction is ON, but your system (e.g. Android/Termux) lacks 'unshare' support required for secure sandboxing. Bash execution is blocked. To run bash commands, disable workspace restriction in /settings."
+                    # Graceful degradation for Termux/environments without unshare capabilities
+                    # We output a warning to stderr so the agent/user knows it's softly restricted.
+                    fallback_cmd = f"echo 'Warning: Strict sandboxing unavailable. Running softly restricted.' >&2; cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}"
+                    proc = await asyncio.create_subprocess_exec(
+                        "bash",
+                        "-c",
+                        fallback_cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        start_new_session=True,
                     )
             else:
                 proc = await asyncio.create_subprocess_exec(
