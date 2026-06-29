@@ -52,7 +52,7 @@ class SlashCommandHandler:
             "/help": self._help,
             "/provider": self._provider,
             "/providers": self._provider,
-            "/model": self._model,
+            "/model": self._models,
             "/models": self._models,
             "/session": self._session,
             "/sessions": self._session,
@@ -129,12 +129,26 @@ class SlashCommandHandler:
                 warning(
                     "No providers configured.  Use /provider add <name> <base_url> <api_key>"
                 )
-            else:
-                print()
-                for name, pc in providers.items():
-                    active = " ◀" if name == self.agent.config.active_provider else ""
-                    print(f"  {green(name)}{cyan(active)}  {dim(pc.base_url)}")
-                print()
+                return False
+                
+            if not parts:
+                from wool.utils.menu import run_list_menu
+                names = list(providers.keys())
+                selected = run_list_menu("Providers:", names, self.agent.config.active_provider)
+                if selected and selected != self.agent.config.active_provider:
+                    p = self.agent.provider_registry.get(selected)
+                    if p:
+                        self.agent.active_provider = p
+                        self.agent.config.active_provider = selected
+                        self.agent.config.save()
+                        success(f"Switched to provider '{selected}'.")
+                return False
+
+            print()
+            for name, pc in providers.items():
+                active = " ◀" if name == self.agent.config.active_provider else ""
+                print(f"  {green(name)}{cyan(active)}  {dim(pc.base_url)}")
+            print()
 
         elif sub == "add":
             if len(parts) < 4:
@@ -221,38 +235,46 @@ class SlashCommandHandler:
     # ── /model ────────────────────────────────────────────────────────────
 
     async def _models(self, args: str) -> bool:
-        return await self._model("list")
-
-    async def _model(self, args: str) -> bool:
         parts = args.strip().split()
-        sub = parts[0] if parts else "show"
+        sub = parts[0] if parts else "list"
 
-        if sub == "show" or not args.strip():
-            model = self.agent.active_model or "auto"
-            provider_name = (
-                self.agent.active_provider.name
-                if self.agent.active_provider
-                else "none"
-            )
-            print(
-                f"\n  {dim('Model:')} {cyan(model)}  {dim('on')} {green(provider_name)}\n"
-            )
-
-        elif sub == "list":
+        if sub == "list":
             if not self.agent.active_provider:
                 ansi_error("No active provider.")
                 return False
-            info("Fetching models...")
+                
+            print(dim(f"Fetching models from {self.agent.active_provider.name}..."))
             try:
                 models = await self.agent.active_provider.list_models()
-                print()
-                for m in models[:50]:
-                    print(f"  {cyan(m.id)}")
-                if len(models) > 50:
-                    print(f"  {dim(f'... and {len(models) - 50} more')}")
-                print()
             except Exception as exc:
                 ansi_error(f"Failed to fetch models: {exc}")
+                return False
+
+            if not models:
+                warning("No models found.")
+                return False
+
+            active_model = None
+            prov_config = self.agent.config.providers.get(self.agent.active_provider.name)
+            if prov_config:
+                active_model = prov_config.default_model
+
+            if not parts:
+                from wool.utils.menu import run_list_menu
+                model_ids = [m.id for m in models]
+                selected = run_list_menu("Models:", model_ids, active_model)
+                if selected and selected != active_model:
+                    if self.agent.active_provider and self.agent.active_provider.name in self.agent.config.providers:
+                        self.agent.config.providers[self.agent.active_provider.name].default_model = selected
+                        self.agent.config.save()
+                        success(f"Switched to model '{selected}'.")
+                return False
+
+            print()
+            for m in models:
+                active = " ◀" if m.id == active_model else ""
+                print(f"  {cyan(m.id)}{active}")
+            print()
 
         elif sub == "switch":
             if len(parts) < 2:

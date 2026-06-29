@@ -336,3 +336,114 @@ def run_settings_menu(config) -> None:
 
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+def run_list_menu(
+    title: str, items: list[str], active_item: str | None
+) -> str | None:
+    """
+    Renders an interactive menu for selecting an item from a list.
+    Returns the selected item, or None if cancelled.
+    """
+    if not items:
+        return None
+
+    try:
+        selected_idx = items.index(active_item) if active_item in items else 0
+    except ValueError:
+        selected_idx = 0
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+
+    print(f"\n  {bold(cyan(title))}")
+
+    try:
+        term_lines = shutil.get_terminal_size().lines
+    except Exception:
+        term_lines = 24
+    max_display = max(5, term_lines - 8)
+
+    def _render(offset: int, sel: int) -> list[str]:
+        try:
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
+
+        max_name_len = max(10, term_width - 12)
+        lines = []
+        visible = items[offset : offset + max_display]
+        for i, name in enumerate(visible):
+            actual_idx = offset + i
+            display_name = (
+                name if len(name) <= max_name_len else name[: max_name_len - 3] + "..."
+            )
+
+            prefix = "❯" if actual_idx == sel else " "
+            if name == active_item:
+                icon = green("●")
+                colored_name = cyan(display_name)
+            else:
+                icon = dim("○")
+                colored_name = white(display_name)
+
+            if actual_idx == sel:
+                colored_name = bold(colored_name)
+
+            color_prefix = cyan(prefix) if actual_idx == sel else prefix
+            lines.append(f"  {color_prefix} {icon} {colored_name}")
+
+        lines.append("")
+        lines.append(f"  {dim('↑/↓: move   Enter: select   q/Esc: cancel')}")
+        return lines
+
+    offset = max(0, min(selected_idx - max_display // 2, len(items) - max_display))
+    if selected_idx < offset:
+        offset = selected_idx
+
+    def _draw():
+        lines = _render(offset, selected_idx)
+        for line in lines:
+            sys.stdout.write(f"\r\033[K{line}\r\n")
+        sys.stdout.flush()
+        return len(lines)
+
+    try:
+        tty.setraw(sys.stdin.fileno())
+        num_lines = _draw()
+
+        while True:
+            ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+
+            if ch == "\x03" or ch.lower() == "q":  # Ctrl+C or q
+                sys.stdout.write("\r\033[K\r\n")
+                return None
+
+            elif ch == "\r" or ch == "\n":  # Enter
+                sys.stdout.write("\r\033[K\r\n")
+                return items[selected_idx]
+
+            elif ch == "\x1b":  # Escape sequence
+                r, _, _ = select.select([fd], [], [], 0.05)
+                if r:
+                    seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+                    if seq in ("[A", "OA"):  # Up
+                        selected_idx = (selected_idx - 1) % len(items)
+                        if selected_idx < offset:
+                            offset = selected_idx
+                        elif selected_idx >= offset + max_display:
+                            offset = selected_idx - max_display + 1
+                    elif seq in ("[B", "OB"):  # Down
+                        selected_idx = (selected_idx + 1) % len(items)
+                        if selected_idx >= offset + max_display:
+                            offset = selected_idx - max_display + 1
+                        elif selected_idx < offset:
+                            offset = selected_idx
+                else:
+                    sys.stdout.write("\r\033[K\r\n")
+                    return None
+
+            sys.stdout.write(f"\r\033[{num_lines}A")
+            num_lines = _draw()
+
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
