@@ -82,7 +82,18 @@ class ExecuteBash(Tool):
 
         try:
             if base.IS_RESTRICTED:
-                script = f'''
+                # Check if unshare is supported (Termux/Android often lacks it)
+                unshare_supported = False
+                try:
+                    import subprocess
+                    ret = subprocess.run(["unshare", "-m", "-r", "true"], capture_output=True)
+                    if ret.returncode == 0:
+                        unshare_supported = True
+                except Exception:
+                    pass
+
+                if unshare_supported:
+                    script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
 PARENT=$(dirname "$RESTRICTED")
 
@@ -108,12 +119,22 @@ fi
 cd "$RESTRICTED"
 exec bash -c {shlex.quote(command)}
 '''
-                proc = await asyncio.create_subprocess_exec(
-                    "unshare", "-m", "-r", "bash", "-c", script,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    start_new_session=True,  # own process group for clean kill
-                )
+                    proc = await asyncio.create_subprocess_exec(
+                        "unshare", "-m", "-r", "bash", "-c", script,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        start_new_session=True,  # own process group for clean kill
+                    )
+                else:
+                    # Graceful degradation for Termux/environments without unshare
+                    proc = await asyncio.create_subprocess_exec(
+                        "bash",
+                        "-c",
+                        f"cd {shlex.quote(str(RESTRICTED_DIR))} && exec bash -c {shlex.quote(command)}",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        start_new_session=True,
+                    )
             else:
                 proc = await asyncio.create_subprocess_exec(
                     "bash",
