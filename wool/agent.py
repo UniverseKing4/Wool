@@ -32,7 +32,7 @@ from wool.tools.web_search import WebSearch
 from wool.utils.ansi import bold, cyan, dim, red, yellow
 
 SYSTEM_PROMPT = """\
-You are Wool, a powerful AI coding assistant running in a Linux terminal.
+You are Wool, a powerful AI assistant running in a Linux terminal.
 You have access to tools for file operations, code intelligence, bash execution, web access, and more.
 
 Guidelines:
