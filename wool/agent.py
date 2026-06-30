@@ -119,7 +119,7 @@ class WoolAgent:
         if not self.messages or self.messages[0].role != "system":
             env_name = "a Linux terminal"
             if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
-                env_name = "an Android Termux terminal"
+                env_name = "an Android Termux Linux terminal"
             else:
                 try:
                     with open("/etc/os-release", "r") as f:
@@ -127,7 +127,7 @@ class WoolAgent:
                             if line.startswith("PRETTY_NAME="):
                                 name = line.split("=", 1)[1].strip().strip('"').strip("'")
                                 if name:
-                                    env_name = f"a {name} terminal"
+                                    env_name = f"a {name} Linux terminal"
                                     break
                 except Exception:
                     pass
