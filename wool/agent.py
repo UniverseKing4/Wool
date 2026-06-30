@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any, AsyncIterator
 
@@ -32,7 +33,7 @@ from wool.tools.web_search import WebSearch
 from wool.utils.ansi import bold, cyan, dim, red, yellow
 
 SYSTEM_PROMPT = """\
-You are Wool, a powerful AI assistant running in a Linux terminal.
+You are Wool, a powerful AI assistant running in {environment_name}.
 You have access to tools for file operations, code intelligence, bash execution, web access, and more.
 
 Guidelines:
@@ -116,7 +117,22 @@ class WoolAgent:
 
     def _ensure_system_message(self) -> None:
         if not self.messages or self.messages[0].role != "system":
-            self.messages.insert(0, ChatMessage(role="system", content=SYSTEM_PROMPT))
+            env_name = "a Linux terminal"
+            if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
+                env_name = "an Android Termux terminal"
+            else:
+                try:
+                    with open("/etc/os-release", "r") as f:
+                        for line in f:
+                            if line.startswith("PRETTY_NAME="):
+                                name = line.split("=", 1)[1].strip().strip('"').strip("'")
+                                if name:
+                                    env_name = f"a {name} terminal"
+                                    break
+                except Exception:
+                    pass
+            prompt = SYSTEM_PROMPT.format(environment_name=env_name)
+            self.messages.insert(0, ChatMessage(role="system", content=prompt))
 
     # ── main agentic loop ─────────────────────────────────────────────────
 
