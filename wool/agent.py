@@ -131,7 +131,7 @@ class WoolAgent:
                                     break
                 except Exception:
                     pass
-            prompt = SYSTEM_PROMPT.format(environment_name=env_name)
+            prompt = SYSTEM_PROMPT.replace("{environment_name}", env_name)
             self.messages.insert(0, ChatMessage(role="system", content=prompt))
 
     # ── main agentic loop ─────────────────────────────────────────────────
