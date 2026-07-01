@@ -120,6 +120,12 @@ class WoolAgent:
             env_name = "a Linux terminal"
             if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
                 env_name = "an Android Termux Linux terminal"
+                try:
+                    import termux  # noqa
+                except ImportError:
+                    import subprocess
+                    import sys
+                    subprocess.Popen([sys.executable, "-m", "pip", "install", "termux-api", "-q"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 try:
                     with open("/etc/os-release", "r") as f:
