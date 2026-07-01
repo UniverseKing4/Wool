@@ -29,11 +29,18 @@ wool
 # Update Wool to the latest version
 wool -u
 
+# Resume the last session instead of starting fresh
+wool -c
+
 # Add your AI provider
 wool › /provider add openrouter https://openrouter.ai/api/v1 sk-or-xxxx
+# OR open the interactive menu
+wool › /providers
 
 # Pick a model
 wool › /model gemini-2.5-pro
+# OR open the interactive menu
+wool › /models
 
 # Start chatting — Wool handles everything
 wool › read this codebase and explain the architecture
@@ -46,18 +53,19 @@ wool › read this codebase and explain the architecture
 ### 🔌 Multi-Provider Support
 Works with **any OpenAI-compatible API** — OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter, local models (Ollama, LM Studio), and more. Switch providers and models on the fly.
 
-### 🛠️ 7 Built-in Tools
+### 🛠️ 8 Built-in Tools
 Wool comes with powerful built-in tools that the AI can use autonomously:
 
 | Tool | Description |
 |------|-------------|
 | `execute_bash` | Run shell commands with timeout, safety guards & process isolation |
-| `file_read` | Read files with line ranges, directory listings, grep search |
-| `file_write` | Create, replace, insert, or append file content surgically |
+| `fs_read` | Read files with line ranges, directory listings, grep search |
+| `fs_write` | Create, replace, insert, or append file content surgically |
 | `code_intelligence` | Symbol search, codebase maps, pattern search across projects |
 | `web_fetch` | Fetch & extract readable content from any URL |
 | `web_search` | Search the live web via DuckDuckGo |
 | `use_subagent` | Delegate tasks to parallel sub-agents for concurrent execution |
+| `multi_tool_use` | Execute multiple tools concurrently in a single step to bypass limitations |
 
 ### 🔗 MCP Protocol Support
 Connect to **any MCP server** — stdio, HTTP/SSE, or Streamable HTTP transports. Full support for authentication headers. Wool launches all connections **in parallel** via `asyncio.gather` for blazing fast boot times.
@@ -98,26 +106,29 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 
 | Command | Description |
 |---------|-------------|
-| `/help` | Show all available commands |
-| `/provider [list\|add\|remove\|switch]` | View or manage AI providers |
+| `wool -u`, `--update`, `--upgrade` | Update Wool to the latest version |
+| `wool -c`, `--continue`, `--resume` | Resume the last session instead of starting fresh |
+| `/help` | Show this help message |
+| `/provider` | View or manage AI providers |
 | `/providers` | Open interactive provider selection menu |
-| `/model [list\|switch <id>]` | View or change the active model |
+| `/model` | View or change the active model |
 | `/models` | Open interactive model selection menu |
 | `/session(s)` | Open interactive session menu |
-| `/new [name]` | Create and switch to a new session |
-| `/rename <new_name>` | Rename the current session |
-| `/settings` | Open interactive settings menu (e.g., Workspace restriction) |
-| `/fork [name]` | Fork conversation to a new session |
+| `/new` | Create and switch to a new session |
+| `/rename` | Rename the current session |
+| `/fork` | Fork current conversation to a new session |
+| `/resume`, `/continue` | Resume the last previous session |
 | `/rewind` | Interactively rewind history to a specific message |
-| `/tools` | List all available tools (built-in + MCP) |
-| `/mcp(s) list\|connect\|disconnect` | Manage MCP servers |
-| `/goal <task>` | Set a goal and work autonomously until complete |
-| `/usage` | View cumulative token usage for the session |
+| `/tools` | List available tools |
+| `/mcp(s)` | Manage MCP servers |
+| `/goal` | Set a goal and work autonomously until complete |
+| `/usage` | View token usage for the current session |
 | `/context` | View detailed token breakdown of current context |
 | `/clear` | Clear conversation history |
-| `/compact` | Compact history (summarize older messages) |
+| `/compact` | Compact history (keep system + last 4 turns) |
 | `/status` | Show current session status |
 | `/copy` | Copy the last AI response to clipboard |
+| `/settings` | Open interactive settings menu |
 | `/exit`, `/quit` | Exit Wool |
 
 ---

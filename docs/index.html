@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Wool — Ultra-lightweight CLI AI Agent</title>
-    <meta name="description" content="Wool is an ultra-lightweight CLI AI agent. One command, infinite power. Works with any AI provider, 7 built-in tools, MCP support, sessions, and more.">
+    <meta name="description" content="Wool is an ultra-lightweight CLI AI agent. One command, infinite power. Works with any AI provider, 8 built-in tools, MCP support, sessions, and more.">
     <meta property="og:title" content="Wool — Ultra-lightweight CLI AI Agent">
     <meta property="og:description" content="Your terminal is the IDE. Wool is the brain. One-line install, works everywhere.">
     <meta property="og:type" content="website">
@@ -323,7 +323,7 @@
 <span class="dim">Ultra-lightweight CLI AI Agent</span>
 
 <span class="dim">Provider:</span> <span class="success">openrouter</span>  <span class="dim">│</span>  <span class="dim">Model:</span> <span class="prompt">gemini-2.5-pro</span>  <span class="dim">│</span>  <span class="dim">Session:</span> <span class="info">default</span>
-<span class="dim">Tools:</span> <span class="bold">7</span> <span class="dim">built-in</span>  <span class="dim">│</span>  <span class="dim">MCP:</span> <span class="bold">2</span> <span class="dim">servers (28 tools)</span>
+<span class="dim">Tools:</span> <span class="bold">8</span> <span class="dim">built-in</span>  <span class="dim">│</span>  <span class="dim">MCP:</span> <span class="bold">2</span> <span class="dim">servers (28 tools)</span>
 <span class="dim">Type</span> <span class="prompt">/help</span> <span class="dim">for commands</span>
 
   <span class="dim">1</span> <span class="prompt">wool</span> <span class="dim">›</span> <span class="cmd">explain this codebase and create a test suite</span>
@@ -344,8 +344,8 @@
         </div>
         <div class="feature-card fade-in">
             <div class="feature-icon">🛠️</div>
-            <h3>7 Built-in Tools</h3>
-            <p>Bash execution, file I/O, code intelligence, web search, URL fetching, and parallel subagent delegation — all out of the box.</p>
+            <h3>8 Built-in Tools</h3>
+            <p>Bash execution, file I/O, code intelligence, web search, URL fetching, parallel subagent delegation, and concurrent multi-tool usage — all out of the box.</p>
         </div>
         <div class="feature-card fade-in">
             <div class="feature-icon">🔗</div>
@@ -415,14 +415,14 @@
         <div class="tool-card fade-in">
             <div class="tool-icon">📖</div>
             <div>
-                <div class="tool-name">file_read</div>
+                <div class="tool-name">fs_read</div>
                 <div class="tool-desc">Read files with line ranges, list directories, grep search, image info</div>
             </div>
         </div>
         <div class="tool-card fade-in">
             <div class="tool-icon">✏️</div>
             <div>
-                <div class="tool-name">file_write</div>
+                <div class="tool-name">fs_write</div>
                 <div class="tool-desc">Create, replace, insert, or append file content with surgical precision</div>
             </div>
         </div>
@@ -454,6 +454,13 @@
                 <div class="tool-desc">Delegate tasks to parallel sub-agents for concurrent background execution</div>
             </div>
         </div>
+        <div class="tool-card fade-in">
+            <div class="tool-icon">🚀</div>
+            <div>
+                <div class="tool-name">multi_tool_use</div>
+                <div class="tool-desc">Execute multiple tools concurrently in a single step to bypass limitations</div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -462,8 +469,9 @@
     <h2 class="section-title fade-in"><span>Commands</span></h2>
     <p class="section-sub fade-in">All slash commands available inside the Wool REPL.</p>
     <div class="commands-grid">
-        <div class="cmd-row fade-in"><span class="cmd-name">wool -u</span><span class="cmd-desc">Update Wool to the latest version</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/help</span><span class="cmd-desc">Show all available commands</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">wool -u, --update, --upgrade</span><span class="cmd-desc">Update Wool to the latest version</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">wool -c, --continue, --resume</span><span class="cmd-desc">Resume the last session instead of starting fresh</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/help</span><span class="cmd-desc">Show this help message</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/provider</span><span class="cmd-desc">View or manage AI providers</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/providers</span><span class="cmd-desc">Open interactive provider selection menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/model</span><span class="cmd-desc">View or change the active model</span></div>
@@ -471,19 +479,20 @@
         <div class="cmd-row fade-in"><span class="cmd-name">/session(s)</span><span class="cmd-desc">Open interactive session menu</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/new</span><span class="cmd-desc">Create and switch to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rename</span><span class="cmd-desc">Rename the current session</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/settings</span><span class="cmd-desc">Open interactive settings menu</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/fork</span><span class="cmd-desc">Fork conversation to a new session</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/rewind</span><span class="cmd-desc">Rewind history interactively</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">List all tools (built-in + MCP)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/fork</span><span class="cmd-desc">Fork current conversation to a new session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/resume, /continue</span><span class="cmd-desc">Resume the last previous session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/rewind</span><span class="cmd-desc">Interactively rewind history to a specific message</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">List available tools</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/mcp(s)</span><span class="cmd-desc">Manage MCP servers</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/goal</span><span class="cmd-desc">Autonomous goal mode</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/usage</span><span class="cmd-desc">View token usage stats</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/context</span><span class="cmd-desc">Context token breakdown</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/goal</span><span class="cmd-desc">Set a goal and work autonomously until complete</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/usage</span><span class="cmd-desc">View token usage for the current session</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/context</span><span class="cmd-desc">View detailed token breakdown of current context</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/clear</span><span class="cmd-desc">Clear conversation history</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/compact</span><span class="cmd-desc">Compact history with AI summary</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/status</span><span class="cmd-desc">Show session status</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/copy</span><span class="cmd-desc">Copy last AI response to clipboard</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/exit</span><span class="cmd-desc">Exit Wool</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/compact</span><span class="cmd-desc">Compact history (keep system + last 4 turns)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/status</span><span class="cmd-desc">Show current session status</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/copy</span><span class="cmd-desc">Copy the last AI response to clipboard</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/settings</span><span class="cmd-desc">Open interactive settings menu</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/exit, /quit</span><span class="cmd-desc">Exit Wool</span></div>
     </div>
 </section>
 
