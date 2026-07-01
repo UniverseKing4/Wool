@@ -59,6 +59,12 @@ else
         echo -e "${YELLOW}ℹ Python version is $PY_VER, need 3.11+. Will attempt to upgrade.${NC}"
         NEEDS_PYTHON=true
     fi
+    
+    # Check if pip is available
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo -e "${YELLOW}ℹ Python pip module is missing. Will attempt to install it.${NC}"
+        NEEDS_PYTHON=true
+    fi
 fi
 
 if ! command_exists git; then
