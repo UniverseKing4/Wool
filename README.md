@@ -109,6 +109,8 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 | Command | Description |
 |---------|-------------|
 | `wool -u`, `--update`, `--upgrade` | Update Wool to the latest version |
+| `wool -e`, `--export` | Export config and sessions to `./wool-export` |
+| `wool -i`, `--import` | Import config and sessions from `./wool-export` |
 | `wool --uninstall` | Completely remove Wool, including sessions & config |
 | `wool -c`, `--continue`, `--resume` | Resume the last session instead of starting fresh |
 | `/help` | Show this help message |
