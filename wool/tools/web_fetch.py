@@ -60,31 +60,34 @@ class WebFetch(Tool):
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
 
+        raw = ""
+        truncated = False
         try:
             async with httpx.AsyncClient(
                 timeout=timeout,
                 follow_redirects=True,
                 headers={"User-Agent": "Wool/0.1 (AI Agent)"},
             ) as client:
-                resp = await client.get(url)
-                resp.raise_for_status()
+                async with client.stream("GET", url) as resp:
+                    resp.raise_for_status()
+                    async for chunk in resp.aiter_text():
+                        raw += chunk
+                        if len(raw) > MAX_RESPONSE_BYTES:
+                            raw = raw[:MAX_RESPONSE_BYTES]
+                            truncated = True
+                            break
         except httpx.HTTPStatusError as exc:
             return ToolResult(
                 success=False,
                 output="",
-                error=f"HTTP {exc.response.status_code}: {exc.response.text[:300]}",
+                error=f"HTTP {exc.response.status_code}",
             )
         except httpx.HTTPError as exc:
             return ToolResult(success=False, output="", error=f"Fetch error: {exc}")
 
-        raw = resp.text
-        if len(raw) > MAX_RESPONSE_BYTES:
-            raw = raw[:MAX_RESPONSE_BYTES]
-            truncated = True
-        else:
-            truncated = False
+        header = f"URL: {url}\n\n"
 
-        header = f"URL: {resp.url}\nStatus: {resp.status_code}\n\n"
+
 
         if mode == "html":
             content = raw
@@ -99,7 +102,7 @@ class WebFetch(Tool):
         return ToolResult(
             success=True,
             output=header + content,
-            metadata={"status_code": resp.status_code, "url": str(resp.url)},
+            metadata={"url": url},
         )
 
     @staticmethod

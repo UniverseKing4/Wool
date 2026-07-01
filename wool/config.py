@@ -46,7 +46,14 @@ class WoolConfig:
             return cls()
         try:
             raw = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except json.JSONDecodeError:
+            try:
+                import shutil
+                shutil.copy(CONFIG_FILE, CONFIG_FILE.with_suffix(".json.bak"))
+            except OSError:
+                pass
+            return cls()
+        except OSError:
             return cls()
 
         providers: dict[str, ProviderConfig] = {}
@@ -79,11 +86,12 @@ class WoolConfig:
             "mcp_servers": self.mcp_servers,
             "restrict_workspace": self.restrict_workspace,
         }
-        temp_path = CONFIG_FILE.with_suffix(".tmp")
-        temp_path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        import os
+        temp_path = CONFIG_FILE.with_suffix(f".tmp.{os.getpid()}")
+        with open(temp_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
         temp_path.replace(CONFIG_FILE)
 
     # ── helpers ───────────────────────────────────────────────────────────

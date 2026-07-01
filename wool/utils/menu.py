@@ -107,6 +107,9 @@ def run_session_menu(
 
         while True:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
 
             if ch == "\x03" or ch.lower() == "q":  # Ctrl+C or q
                 sys.stdout.write("\r\033[K\r\n")
@@ -221,6 +224,9 @@ def run_rewind_menu(messages: list[tuple[int, str]]) -> int | None:
 
         while True:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
 
             if ch == "\x03" or ch.lower() == "q":
                 sys.stdout.write("\r\033[K\r\n")
@@ -301,6 +307,9 @@ def run_settings_menu(config) -> None:
 
         while True:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
 
             if ch == "\x03" or ch.lower() == "q":
                 sys.stdout.write("\r\033[K\r\n")
@@ -413,6 +422,9 @@ def run_list_menu(
 
         while True:
             ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
 
             if ch == "\x03" or ch.lower() == "q":  # Ctrl+C or q
                 sys.stdout.write("\r\033[K\r\n")

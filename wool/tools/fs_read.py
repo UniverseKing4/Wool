@@ -118,7 +118,7 @@ class FileSystemRead(Tool):
                     if start <= total_lines <= end:
                         if len(selected) >= MAX_FILE_LINES:
                             truncated = True
-                            continue
+                            break
                         selected.append(line)
         except Exception as exc:
             return ToolResult(success=False, output="", error=str(exc))
@@ -151,7 +151,7 @@ class FileSystemRead(Tool):
             for i, child in enumerate(children):
                 if i >= MAX_DIR_ENTRIES:
                     entries.append(
-                        f"  ... ({len(list(p.iterdir())) - MAX_DIR_ENTRIES} more)"
+                        f"  ... ({len(children) - MAX_DIR_ENTRIES} more)"
                     )
                     break
                 prefix = "📁" if child.is_dir() else "📄"
@@ -195,6 +195,11 @@ class FileSystemRead(Tool):
                 return ToolResult(success=True, output="No matches found.")
             return ToolResult(success=True, output=text)
         except asyncio.TimeoutError:
+            try:
+                proc.kill()
+                await proc.wait()
+            except OSError:
+                pass
             return ToolResult(success=False, output="", error="Search timed out.")
         except FileNotFoundError:
             return ToolResult(

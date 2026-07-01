@@ -169,10 +169,11 @@ exec proot -r "$JAIL" $BINDS -b "$RESTRICTED":/workspace -w /workspace bash -c {
 
             async def read_stream(stream: asyncio.StreamReader, chunks_list: list[str]) -> None:
                 buffer = ""
+                total_len = 0
                 while True:
                     chunk = await stream.read(1024)
                     if not chunk:
-                        if buffer:
+                        if buffer and total_len < MAX_OUTPUT:
                             buffer = re.sub(r"(?im)^.*linkerconfig/ld\.config\.txt.*$\n?", "", buffer)
                             if buffer:
                                 chunks_list.append(buffer)
@@ -191,8 +192,9 @@ exec proot -r "$JAIL" $BINDS -b "$RESTRICTED":/workspace -w /workspace bash -c {
                         output_text = "\n".join(complete_lines) + "\n"
                         output_text = re.sub(r"(?im)^.*linkerconfig/ld\.config\.txt.*$\n?", "", output_text)
                         
-                        if output_text:
+                        if output_text and total_len < MAX_OUTPUT:
                             chunks_list.append(output_text)
+                            total_len += len(output_text)
                             if stream_callback:
                                 await stream_callback(output_text)
 
@@ -234,6 +236,10 @@ exec proot -r "$JAIL" $BINDS -b "$RESTRICTED":/workspace -w /workspace bash -c {
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
                 except ProcessLookupError:
+                    pass
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=1)
+                except Exception:
                     pass
                 raise
 

@@ -262,7 +262,7 @@ class CodeIntelligence(Tool):
         depth: int,
         max_depth: int,
     ) -> None:
-        if depth >= max_depth:
+        if depth >= max_depth or len(out) >= 500:
             return
         try:
             children = sorted(
@@ -305,6 +305,11 @@ class CodeIntelligence(Tool):
                 text = text[:50_000] + "\n... (truncated)"
             return ToolResult(success=True, output=text or "No matches found.")
         except asyncio.TimeoutError:
+            try:
+                proc.kill()
+                await proc.wait()
+            except OSError:
+                pass
             return ToolResult(success=False, output="", error="Search timed out.")
         except FileNotFoundError:
             return ToolResult(success=False, output="", error="grep not found.")

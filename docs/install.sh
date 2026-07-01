@@ -143,8 +143,19 @@ else
         pipx install --force "git+https://github.com/UniverseKing4/Wool.git"
     else
         echo -e "${YELLOW}ℹ pipx not available, using pip install --user...${NC}"
-        python3 -m pip install --user --upgrade --force-reinstall --break-system-packages "git+https://github.com/UniverseKing4/Wool.git" 2>/dev/null || \
-        python3 -m pip install --user --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
+        if ! python3 -m pip --version >/dev/null 2>&1; then
+            echo -e "${YELLOW}ℹ pip is still not available. Bootstrapping pip...${NC}"
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py --user || true
+            rm -f get-pip.py
+        fi
+        
+        if python3 -m pip --version >/dev/null 2>&1; then
+            python3 -m pip install --user --upgrade --force-reinstall --break-system-packages "git+https://github.com/UniverseKing4/Wool.git" 2>/dev/null || \
+            python3 -m pip install --user --upgrade --force-reinstall "git+https://github.com/UniverseKing4/Wool.git"
+        else
+            echo -e "${RED}✗ Failed to install pip. Please install pip manually and try again.${NC}"
+            exit 1
+        fi
     fi
 fi
 

@@ -142,6 +142,9 @@ class SlashCommandHandler:
                 if p_config and p_config.default_model:
                     self.agent.active_model = p_config.default_model
                     self.agent.config.active_model = p_config.default_model
+                else:
+                    self.agent.active_model = None
+                    self.agent.config.active_model = None
                 
                 self.agent.config.save()
                 success(f"Switched to provider '{selected}'.")
@@ -231,6 +234,9 @@ class SlashCommandHandler:
             if p_config and p_config.default_model:
                 self.agent.active_model = p_config.default_model
                 self.agent.config.active_model = p_config.default_model
+            else:
+                self.agent.active_model = None
+                self.agent.config.active_model = None
 
             self.agent.config.save()
             success(f"Switched to provider '{name}'.")
@@ -249,6 +255,9 @@ class SlashCommandHandler:
             if p_config and p_config.default_model:
                 self.agent.active_model = p_config.default_model
                 self.agent.config.active_model = p_config.default_model
+            else:
+                self.agent.active_model = None
+                self.agent.config.active_model = None
 
             self.agent.config.save()
             success(f"Switched to provider '{sub}'.")
@@ -610,9 +619,12 @@ class SlashCommandHandler:
             return False
         new_name = parts[0]
         old_path = self.agent.get_session_path()
+        new_path = self.agent.get_session_path(new_name)
+        if new_path.exists():
+            ansi_error("A session with that name already exists.")
+            return False
         self.agent.config.active_session = new_name
         self.agent.config.save()
-        new_path = self.agent.get_session_path()
         if old_path.exists():
             old_path.rename(new_path)
         self.agent.save_session()

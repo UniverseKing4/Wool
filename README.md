@@ -91,6 +91,8 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 - **Goal mode** — set a goal and let Wool work autonomously until complete
 - **Parallel subagents** — delegate multiple tasks to run concurrently in the background
 - **Smart context tracking** — detailed token usage and context breakdown
+- **Zero-lag event loop** — blazing fast, non-blocking I/O ensures the UI never hangs
+- **Atomic persistence** — process-safe, corruption-proof session and configuration saving
 - **Graceful cancellation** — hit Escape to safely abort and capture partial tool output
 - **Auto-cleanup** — ghost sessions with no messages are perfectly scrubbed to keep workspaces clean
 

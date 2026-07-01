@@ -693,10 +693,12 @@ class WoolAgent:
             "total_usage": self.total_usage,
         }
 
-        temp_path = path.with_suffix(".tmp")
-        temp_path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        import os
+        temp_path = path.with_suffix(f".tmp.{os.getpid()}")
+        with open(temp_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
         temp_path.replace(path)
 
     def clear_history(self) -> None:

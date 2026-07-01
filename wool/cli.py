@@ -233,26 +233,39 @@ async def run_repl(resume: bool = False) -> None:
             old_settings = None
 
         def on_input() -> None:
-            ch = sys.stdin.read(1)
-            if ch == "\x03":  # Ctrl+C
+            import os
+            try:
+                data = os.read(fd, 1024)
+            except OSError:
+                return
+            if not data:
+                return
+            
+            # Simple heuristic: look for Ctrl+C (3)
+            if b'\x03' in data:
                 cancel_event.set()
                 typeahead_buffer.clear()
-            elif ch == "\x1b":  # Escape or start of escape sequence
-                import select
-
-                r, _, _ = select.select([sys.stdin.fileno()], [], [], 0.05)
-                if r:
-                    # It's an escape sequence (e.g. arrow keys), read and discard it
-                    sys.stdin.read(2)
-                else:
-                    # It's a plain Escape key press
-                    cancel_event.set()
-                    typeahead_buffer.clear()
-            elif ch in ("\x7f", "\b"):  # Backspace
-                if typeahead_buffer:
-                    typeahead_buffer.pop()
-            elif ch.isprintable() or ch == " ":
-                typeahead_buffer.append(ch)
+                return
+                
+            text = data.decode('utf-8', errors='replace')
+            i = 0
+            while i < len(text):
+                ch = text[i]
+                if ch == '\x1b':
+                    if i + 1 < len(text):
+                        # skip escape sequence
+                        i += 1
+                        while i < len(text) and not (64 <= ord(text[i]) <= 126):
+                            i += 1
+                    else:
+                        cancel_event.set()
+                        typeahead_buffer.clear()
+                elif ch in ('\x7f', '\b'):
+                    if typeahead_buffer:
+                        typeahead_buffer.pop()
+                elif ch.isprintable() or ch == ' ':
+                    typeahead_buffer.append(ch)
+                i += 1
 
         is_thinking = asyncio.Event()
         is_thinking.set()
@@ -435,6 +448,8 @@ async def run_repl(resume: bool = False) -> None:
             user_cancelled = cancel_event.is_set()
 
             cancel_event.set()
+            if not cancel_task.done():
+                cancel_task.cancel()
             if is_thinking.is_set():
                 is_thinking.clear()
             await spinner_task
