@@ -59,6 +59,12 @@ class WebSearch(Tool):
 
         if not results:
             try:
+                results = await self._bing_search(query, num)
+            except Exception as exc:
+                errors.append(f"Bing: {exc}")
+
+        if not results:
+            try:
                 results = await self._wiki_search(query, num)
             except Exception as exc:
                 errors.append(f"Wiki: {exc}")
@@ -145,6 +151,60 @@ class WebSearch(Tool):
             title = html.unescape(re.sub(r"<[^>]+>", "", block.group(2)).strip())
             snippet = html.unescape(re.sub(r"<[^>]+>", "", block.group(3)).strip())
             results.append({"title": title, "url": raw_url, "snippet": snippet})
+            
+        return results
+
+    async def _bing_search(self, query: str, num: int) -> list[dict[str, str]]:
+        """Scrape Bing HTML for results."""
+        url = f"https://www.bing.com/search?q={quote_plus(query)}"
+        async with httpx.AsyncClient(
+            timeout=15,
+            follow_redirects=True,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+        ) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+
+        body = resp.text
+        results: list[dict[str, str]] = []
+        
+        for block in re.finditer(r'<li class="b_algo".*?>(.*?)</li>', body, re.DOTALL | re.IGNORECASE):
+            if len(results) >= num:
+                break
+            b = block.group(1)
+            m = re.search(r'<h2[^>]*>.*?<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', b, re.IGNORECASE)
+            if not m:
+                continue
+                
+            raw_url = html.unescape(m.group(1))
+            title = html.unescape(re.sub(r"<[^>]+>", "", m.group(2)).strip())
+            
+            # Decode Bing's tracking URL
+            u_match = re.search(r"&u=a1([a-zA-Z0-9_-]+)", raw_url)
+            if u_match:
+                try:
+                    import base64
+                    b64 = u_match.group(1)
+                    b64 += "=" * ((4 - len(b64) % 4) % 4)
+                    url_val = base64.urlsafe_b64decode(b64).decode("utf-8")
+                except Exception:
+                    url_val = raw_url
+            else:
+                url_val = raw_url
+                
+            m_snip = re.search(r'<div class="b_caption">(?:<p[^>]*>)?(.*?)(?:</p>|</div>)', b, re.IGNORECASE | re.DOTALL)
+            if m_snip:
+                snippet = html.unescape(re.sub(r"<[^>]+>", "", m_snip.group(1)).strip())
+            else:
+                m_snip2 = re.search(r'<div class="b_snippet">.*?<p[^>]*>(.*?)</p>', b, re.IGNORECASE | re.DOTALL)
+                snippet = html.unescape(re.sub(r"<[^>]+>", "", m_snip2.group(1)).strip()) if m_snip2 else ""
+                
+            results.append({"title": title, "url": url_val, "snippet": snippet})
             
         return results
 
