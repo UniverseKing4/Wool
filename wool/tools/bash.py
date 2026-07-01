@@ -82,18 +82,12 @@ class ExecuteBash(Tool):
 
         try:
             if base.IS_RESTRICTED:
-                # 1. Test if unshare is supported natively (Linux)
                 import subprocess
-                unshare_works = False
-                try:
-                    ret = subprocess.run(["unshare", "-m", "-r", "true"], capture_output=True)
-                    if ret.returncode == 0:
-                        unshare_works = True
-                except Exception:
-                    pass
-
-                if unshare_works:
-                    # Restore original Linux sandbox behavior requested by user
+                import shutil
+                is_android = "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/system/build.prop")
+                
+                if shutil.which("unshare") and not is_android:
+                    # 1. Standard Linux Sandbox via unshare
                     script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
 PARENT=$(dirname "$RESTRICTED")
@@ -260,8 +254,8 @@ exec proot -r "$JAIL" $BINDS -b "$RESTRICTED":/workspace -w /workspace bash -c {
                 metadata={"exit_code": exit_code},
             )
 
-        except FileNotFoundError:
-            return ToolResult(success=False, output="", error="Shell not found.")
+        except FileNotFoundError as e:
+            return ToolResult(success=False, output="", error=f"Shell not found: {e}")
         except PermissionError as exc:
             return ToolResult(
                 success=False, output="", error=f"Permission denied: {exc}"
