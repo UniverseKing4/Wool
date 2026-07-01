@@ -12,17 +12,12 @@ def main() -> None:
     )
     parser.add_argument(
         "-c",
+        "-r",
         "--continue",
         "--resume",
         dest="resume",
         action="store_true",
         help="Continue/resume the last session instead of starting fresh",
-    )
-    parser.add_argument(
-        "-r",
-        dest="resume",
-        action="store_true",
-        help=argparse.SUPPRESS,  # hidden alias for -c
     )
     parser.add_argument(
         "-u",

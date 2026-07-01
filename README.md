@@ -112,7 +112,7 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 | `wool -e`, `--export` | Export config and sessions to `./wool-export` |
 | `wool -i`, `--import` | Import config and sessions from `./wool-export` |
 | `wool --uninstall` | Completely remove Wool, including sessions & config |
-| `wool -c`, `--continue`, `--resume` | Resume the last session instead of starting fresh |
+| `wool -c`, `-r`, `--continue`, `--resume` | Resume the last session instead of starting fresh |
 | `/help` | Show this help message |
 | `/provider` | View or manage AI providers |
 | `/providers` | Open interactive provider selection menu |
