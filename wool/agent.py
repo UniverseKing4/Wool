@@ -121,7 +121,7 @@ class WoolAgent:
             if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
                 env_name = "an Android Termux Linux terminal"
                 try:
-                    import termux  # noqa
+                    import termux  # type: ignore # noqa
                 except ImportError:
                     import subprocess
                     import sys
