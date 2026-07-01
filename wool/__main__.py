@@ -76,7 +76,12 @@ def main() -> None:
         if config_dir.exists():
             shutil.rmtree(config_dir, ignore_errors=True)
 
-        print("\033[32m✓ Wool has been completely removed. Goodbye! 🐑\033[0m")
+        print("\n\033[32m────────────────────────────────────────\033[0m")
+        print("\033[32m  ✓ Wool has been completely uninstalled! 🐑\033[0m")
+        print("\033[32m────────────────────────────────────────\033[0m\n")
+        print("\033[36mIf you ever want to reinstall, just run:\033[0m")
+        print("\033[1m  curl -fsSL https://universeking4.github.io/Wool/install.sh | bash\033[0m\n")
+        print("\033[2mGoodbye!\033[0m")
         sys.exit(0)
 
     from wool.cli import run_repl
