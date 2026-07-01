@@ -139,28 +139,18 @@ exec bash -c {shlex.quote(command)}
                             subprocess.run(["apt-get", "update"], capture_output=True)
                             subprocess.run(["apt-get", "install", "-y", "proot"], capture_output=True)
                     
-                    # Proot jail script
+                    # Proot jail script (Unified for standard Linux, native Termux, and PRoot Debian)
                     prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
-                    if os.path.exists(prefix):
-                        # Termux environment requires Android system paths for the linker (linker64)
-                        script = f'''
+                    script = f'''
 RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
 JAIL=$(mktemp -d)
-# Bind essential Android system paths for Termux binaries
-ANDROID_BINDS=""
-for d in /system /apex /vendor /linkerconfig /bionic; do
+BINDS=""
+for d in /bin /usr /lib /lib64 /etc /dev /proc /system /apex /vendor /linkerconfig /bionic "{prefix}"; do
     if [ -d "$d" ]; then
-        ANDROID_BINDS="$ANDROID_BINDS -b $d:$d"
+        BINDS="$BINDS -b $d:$d"
     fi
 done
-exec proot -r "$JAIL" -b {prefix}:{prefix} $ANDROID_BINDS -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
-'''
-                    else:
-                        # Standard Linux fallback if unshare fails but proot is installed
-                        script = f'''
-RESTRICTED={shlex.quote(str(RESTRICTED_DIR))}
-JAIL=$(mktemp -d)
-exec proot -r "$JAIL" -b /bin:/bin -b /usr:/usr -b /lib:/lib -b /lib64:/lib64 -b /etc:/etc -b /dev:/dev -b /proc:/proc -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
+exec proot -r "$JAIL" $BINDS -b "$RESTRICTED":/workspace -w /workspace bash -c {shlex.quote(command)}
 '''
                     proc = await asyncio.create_subprocess_exec(
                         "bash", "-c", script,
