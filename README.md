@@ -76,7 +76,12 @@ wool › /mcp connect fs npx -y @modelcontextprotocol/server-filesystem /tmp
 
 # Remote HTTP server with API key
 wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer your-key"
+
+# Open the interactive toggle menu for MCP servers
+wool › /mcps
 ```
+
+**Dual-Mode Commands:** Commands like `/mcps` and `/mcp` share logic intelligently. Run `/mcps` with no arguments to get the interactive TUI menu with live-toggling (syncs states dynamically without a restart), or pass arguments (`/mcps disconnect apify`) to bypass the menu and execute directly.
 
 ### 💬 Session Management
 - **Multiple named sessions** — work on different tasks independently
@@ -93,7 +98,8 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 - **Smart context tracking** — detailed token usage and context breakdown
 - **Zero-lag event loop** — blazing fast, non-blocking I/O ensures the UI never hangs
 - **Atomic persistence** — process-safe, corruption-proof session and configuration saving
-- **Graceful cancellation** — hit Escape to safely abort and capture partial tool output
+- **Graceful cancellation & teardown** — hit Escape to safely abort LLM generation or tool execution. Unhandled interrupts or shutdowns perfectly terminate all background child processes without leaking orphans.
+- **Graceful Tool Degradation** — If you disable a tool via the interactive menus, Wool elegantly notifies the LLM in-context so it can dynamically adapt without crashing.
 - **Auto-cleanup** — ghost sessions with no messages are perfectly scrubbed to keep workspaces clean
 
 ### 🛡️ Secure Workspace Restrictions
