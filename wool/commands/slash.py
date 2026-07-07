@@ -398,7 +398,7 @@ class SlashCommandHandler:
         
         # After menu exits, reconcile state
         disabled = self.agent.config.disabled_mcps
-        active = self.agent.mcp_manager.list_servers()
+        active = [s["name"] for s in self.agent.mcp_manager.list_servers()]
         all_mcps = self.agent.config.mcp_servers
         
         for name in all_mcps:
