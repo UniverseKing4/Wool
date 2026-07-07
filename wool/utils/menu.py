@@ -587,7 +587,6 @@ def run_tools_menu(
                         if len(tabs) > 1 and active_tab == 0:
                             active_tab = 1
                             selected_idx = 0
-                            nonlocal offset
                             offset = 0
                     elif seq in ("[D", "OD"):  # Left
                         if active_tab == 1:
