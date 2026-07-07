@@ -578,7 +578,7 @@ def run_tools_menu(
                         config.disabled_tools.append(tool.name)
                     config.save()
                 
-                sys.stdout.write(f"\r\033[{num_lines}A")
+                sys.stdout.write(f"\r\033[{num_lines}A\033[J")
                 num_lines = _draw()
 
             elif ch == "\x1b":
@@ -609,7 +609,7 @@ def run_tools_menu(
                     sys.stdout.write("\r\033[K\r\n")
                     return
 
-                sys.stdout.write(f"\r\033[{num_lines}A")
+                sys.stdout.write(f"\r\033[{num_lines}A\033[J")
                 num_lines = _draw()
 
     finally:
