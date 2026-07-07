@@ -132,18 +132,20 @@ Natively supports **all Linux distributions** and **Android Termux**. No hardcod
 | `wool --uninstall` | Completely remove Wool, including sessions & config |
 | `wool -c`, `-r`, `--continue`, `--resume` | Resume the last session instead of starting fresh |
 | `/help` | Show this help message |
-| `/provider` | View or manage AI providers |
-| `/providers` | Open interactive provider selection menu |
-| `/model` | View or change the active model |
-| `/models` | Open interactive model selection menu |
-| `/session(s)` | Open interactive session menu |
-| `/new` | Create and switch to a new session |
-| `/rename` | Rename the current session |
-| `/fork` | Fork current conversation to a new session |
+| `/provider [list|add|remove|switch]` | View or manage AI providers |
+| `/providers [args...]` | Open interactive provider menu (or pass args) |
+| `/model [list|switch <id>]` | View or change the active model |
+| `/models [args...]` | Open interactive model menu (or pass args) |
+| `/session [list|new]` | Manage sessions |
+| `/sessions [args...]` | Open interactive session menu (or pass args) |
+| `/new [name]` | Create and switch to a new session |
+| `/rename <new_name>` | Rename the current session |
+| `/fork [name]` | Fork current conversation to a new session |
 | `/resume`, `/continue` | Resume the last previous session |
 | `/rewind` | Interactively rewind history to a specific message |
-| `/tools` | List available tools |
-| `/mcp(s)` | Manage MCP servers |
+| `/tools` | Open interactive menu to manage and toggle tools |
+| `/mcp [list|connect|disconnect]` | Manage MCP servers |
+| `/mcps [args...]` | Open interactive MCP menu (or pass args) |
 | `/goal` | Set a goal and work autonomously until complete |
 | `/usage` | View token usage for the current session |
 | `/context` | View detailed token breakdown of current context |

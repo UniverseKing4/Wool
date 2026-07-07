@@ -480,18 +480,20 @@
         <div class="cmd-row fade-in"><span class="cmd-name">wool --uninstall</span><span class="cmd-desc">Completely remove Wool, including sessions & config</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">wool -c, -r, --continue, --resume</span><span class="cmd-desc">Resume the last session instead of starting fresh</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/help</span><span class="cmd-desc">Show this help message</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/provider</span><span class="cmd-desc">View or manage AI providers</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/providers</span><span class="cmd-desc">Open interactive provider selection menu</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/model</span><span class="cmd-desc">View or change the active model</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/models</span><span class="cmd-desc">Open interactive model selection menu</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/session(s)</span><span class="cmd-desc">Open interactive session menu</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/provider [list|add|remove|switch]</span><span class="cmd-desc">View or manage AI providers</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/providers [args...]</span><span class="cmd-desc">Open interactive provider menu (or pass args)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/model [list|switch &lt;id&gt;]</span><span class="cmd-desc">View or change the active model</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/models [args...]</span><span class="cmd-desc">Open interactive model menu (or pass args)</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/session [list|new]</span><span class="cmd-desc">Manage sessions</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/sessions [args...]</span><span class="cmd-desc">Open interactive session menu (or pass args)</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/new</span><span class="cmd-desc">Create and switch to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rename</span><span class="cmd-desc">Rename the current session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/fork</span><span class="cmd-desc">Fork current conversation to a new session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/resume, /continue</span><span class="cmd-desc">Resume the last previous session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/rewind</span><span class="cmd-desc">Interactively rewind history to a specific message</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">List available tools</span></div>
-        <div class="cmd-row fade-in"><span class="cmd-name">/mcp(s)</span><span class="cmd-desc">Manage MCP servers</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/tools</span><span class="cmd-desc">Open interactive menu to manage and toggle tools</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/mcp [list|connect|disconnect]</span><span class="cmd-desc">Manage MCP servers</span></div>
+        <div class="cmd-row fade-in"><span class="cmd-name">/mcps [args...]</span><span class="cmd-desc">Open interactive MCP menu (or pass args)</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/goal</span><span class="cmd-desc">Set a goal and work autonomously until complete</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/usage</span><span class="cmd-desc">View token usage for the current session</span></div>
         <div class="cmd-row fade-in"><span class="cmd-name">/context</span><span class="cmd-desc">View detailed token breakdown of current context</span></div>
