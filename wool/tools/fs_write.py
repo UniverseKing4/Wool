@@ -25,7 +25,8 @@ class FileSystemWrite(Tool):
     def description(self) -> str:
         return (
             "Write to the Linux filesystem: create a new file, replace a string, "
-            "insert at a line, or append content."
+            "insert at a line, or append content. Note: Destructive edits "
+            "(str_replace, insert) automatically create a .wool.bak backup file."
         )
 
     @property
