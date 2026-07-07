@@ -5,7 +5,7 @@ import sys
 import termios
 import tty
 
-from wool.utils.ansi import bold, cyan, dim, green, red, white
+from wool.utils.ansi import bold, cyan, dim, green, red, white, magenta
 
 
 def run_session_menu(
