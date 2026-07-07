@@ -27,8 +27,8 @@ class ChatMessage:
     name: str | None = None
     usage: dict | None = None
 
-    def to_dict(self) -> dict:
-        """Serialise for the OpenAI-compatible API."""
+    def to_dict(self, for_api: bool = False) -> dict:
+        """Serialise for the OpenAI-compatible API or storage."""
         d: dict = {"role": self.role}
         if self.content is not None:
             d["content"] = self.content
@@ -38,7 +38,7 @@ class ChatMessage:
             d["tool_call_id"] = self.tool_call_id
         if self.name is not None:
             d["name"] = self.name
-        if self.usage is not None:
+        if not for_api and self.usage is not None:
             d["usage"] = self.usage
         return d
 

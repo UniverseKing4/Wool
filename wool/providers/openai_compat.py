@@ -77,7 +77,7 @@ class OpenAICompatProvider(Provider):
 
         body: dict = {
             "model": model,
-            "messages": [m.to_dict() for m in messages],
+            "messages": [m.to_dict(for_api=True) for m in messages],
             "temperature": temperature,
             "stream": True,
             "stream_options": {"include_usage": True},
