@@ -500,7 +500,9 @@ def run_tools_menu(
                 tab_str += f"  {bold(cyan(t))}  "
             else:
                 tab_str += f"  {dim(t)}  "
-        lines.append(f"\n{tab_str}\n")
+        lines.append("")
+        lines.append(tab_str)
+        lines.append("")
         
         current_list = built_in_tools if tab == 0 else mcp_tools
         
@@ -526,16 +528,17 @@ def run_tools_menu(
                 
                 # Truncate description to fit terminal width
                 max_desc_len = max(5, term_width - 40)
-                desc = desc.replace("\n", " ")
+                desc = desc.replace("\n", " ").strip()
                 if len(desc) > max_desc_len:
                     desc = desc[:max_desc_len - 3] + "..."
                 
+                name_padded = f"{name:<25s}"
                 color_prefix = cyan(prefix) if actual_idx == sel else prefix
-                colored_name = cyan(name) if actual_idx == sel else white(name)
+                colored_name = cyan(name_padded) if actual_idx == sel else white(name_padded)
                 if actual_idx == sel:
                     colored_name = bold(colored_name)
                 
-                lines.append(f"  {color_prefix} {status} {colored_name:<25s} {dim(desc)}")
+                lines.append(f"  {color_prefix} {status} {colored_name} {dim(desc)}")
 
         lines.append("")
         if tab == 0:
