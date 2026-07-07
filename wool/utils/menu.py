@@ -477,8 +477,20 @@ def run_tools_menu(
         tabs.append("MCP Tools")
 
     selected_idx = 0
+    offset = 0
 
-    def _render(tab: int, sel: int) -> list[str]:
+    try:
+        term_lines = shutil.get_terminal_size().lines
+    except Exception:
+        term_lines = 24
+    max_display = max(5, term_lines - 8)
+
+    def _render(tab: int, sel: int, off: int) -> list[str]:
+        try:
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
+
         lines = []
         
         # Tabs header
@@ -496,23 +508,31 @@ def run_tools_menu(
         if not current_list:
             lines.append(f"  {dim('No tools available.')}")
         else:
-            for i, tool in enumerate(current_list):
-                prefix = "❯" if i == sel else " "
+            visible = current_list[off : off + max_display]
+            for i, tool in enumerate(visible):
+                actual_idx = off + i
+                prefix = "❯" if actual_idx == sel else " "
                 
                 if tab == 0:
                     name = tool.name
-                    desc = tool.description[:60]
+                    desc = tool.description
                     is_disabled = name in config.disabled_tools
                     status = dim("○") if is_disabled else green("●")
                 else:
                     fn = tool.get("function", {})
                     name = fn.get("name", "?")
-                    desc = fn.get("description", "")[:60]
+                    desc = fn.get("description", "")
                     status = green("●")
                 
-                color_prefix = cyan(prefix) if i == sel else prefix
-                colored_name = cyan(name) if i == sel else white(name)
-                if i == sel:
+                # Truncate description to fit terminal width
+                max_desc_len = max(5, term_width - 40)
+                desc = desc.replace("\n", " ")
+                if len(desc) > max_desc_len:
+                    desc = desc[:max_desc_len - 3] + "..."
+                
+                color_prefix = cyan(prefix) if actual_idx == sel else prefix
+                colored_name = cyan(name) if actual_idx == sel else white(name)
+                if actual_idx == sel:
                     colored_name = bold(colored_name)
                 
                 lines.append(f"  {color_prefix} {status} {colored_name:<25s} {dim(desc)}")
@@ -526,7 +546,7 @@ def run_tools_menu(
         return lines
 
     def _draw():
-        lines = _render(active_tab, selected_idx)
+        lines = _render(active_tab, selected_idx, offset)
         for line in lines:
             sys.stdout.write(f"\r\033[K{line}\r\n")
         sys.stdout.flush()
@@ -567,15 +587,22 @@ def run_tools_menu(
                         if len(tabs) > 1 and active_tab == 0:
                             active_tab = 1
                             selected_idx = 0
+                            nonlocal offset
+                            offset = 0
                     elif seq in ("[D", "OD"):  # Left
                         if active_tab == 1:
                             active_tab = 0
                             selected_idx = 0
+                            offset = 0
                     elif seq in ("[A", "OA"):  # Up
                         selected_idx = max(0, selected_idx - 1)
+                        if selected_idx < offset:
+                            offset = selected_idx
                     elif seq in ("[B", "OB"):  # Down
                         if current_list:
                             selected_idx = min(len(current_list) - 1, selected_idx + 1)
+                            if selected_idx >= offset + max_display:
+                                offset = selected_idx - max_display + 1
                 else:
                     sys.stdout.write("\r\033[K\r\n")
                     return
