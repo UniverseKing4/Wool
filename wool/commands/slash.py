@@ -405,8 +405,15 @@ class SlashCommandHandler:
             if name in disabled and name in active:
                 await self.agent.mcp_manager.disconnect(name)
             elif name not in disabled and name not in active:
+                cfg = all_mcps[name]
                 try:
-                    await self.agent.mcp_manager.connect(name, all_mcps[name])
+                    await self.agent.mcp_manager.connect(
+                        name,
+                        command=cfg.get("command"),
+                        url=cfg.get("url"),
+                        env=cfg.get("env"),
+                        headers=cfg.get("headers"),
+                    )
                 except Exception as e:
                     print(f"  {red('✗')} Failed to connect MCP '{name}': {e}")
         

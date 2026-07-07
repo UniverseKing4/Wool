@@ -654,9 +654,13 @@ def run_mcps_menu(config) -> None:
                 prefix = "❯" if actual_idx == sel else " "
                 
                 cfg = config.mcp_servers[name]
-                command = cfg.get("command", "")
-                args = " ".join(cfg.get("args", []))
-                desc = f"{command} {args}"
+                cmd_val = cfg.get("command")
+                if isinstance(cmd_val, list):
+                    desc = " ".join(cmd_val)
+                elif cfg.get("url"):
+                    desc = cfg.get("url")
+                else:
+                    desc = str(cmd_val)
                 
                 is_disabled = name in config.disabled_mcps
                 status = dim("○") if is_disabled else green("●")
