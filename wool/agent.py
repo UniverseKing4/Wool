@@ -427,8 +427,8 @@ class WoolAgent:
                 tool = self.tool_registry.get(tc.name)
                 
                 if tc.name in self.config.disabled_tools:
-                    res = ToolResult(success=False, output="", error=f"Tool '{tc.name}' is currently disabled by the user.")
-                    self.messages.append(ChatMessage(role="tool", content=res.to_json(), tool_call_id=tc.id, name=tc.name))
+                    res_str = f"Error: Tool '{tc.name}' is currently disabled by the user."
+                    self.messages.append(ChatMessage(role="tool", content=res_str, tool_call_id=tc.id, name=tc.name))
                     return
                 
                 async def stream_cb(chunk: str):

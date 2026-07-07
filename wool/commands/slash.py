@@ -197,6 +197,10 @@ class SlashCommandHandler:
                 ansi_error("Usage: /provider remove <name>")
                 return False
             name = parts[1]
+            if name not in self.agent.config.providers:
+                warning(f"Provider '{name}' is not configured.")
+                return False
+                
             self.agent.config.remove_provider(name)
             self.agent.provider_registry.remove(name)
             if self.agent.active_provider and self.agent.active_provider.name == name:
@@ -210,9 +214,8 @@ class SlashCommandHandler:
                     prov_cfg = self.agent.config.providers.get(
                         self.agent.active_provider.name
                     )
-                    self.agent.active_model = (
-                        prov_cfg.default_model if prov_cfg else None
-                    )
+                    if prov_cfg and prov_cfg.default_model:
+                        self.agent.active_model = prov_cfg.default_model
                 else:
                     self.agent.config.active_provider = None
                     self.agent.active_model = None
@@ -381,6 +384,12 @@ class SlashCommandHandler:
     # ── /tools ────────────────────────────────────────────────────────────
 
     async def _tools(self, _args: str) -> bool:
+        from wool.utils.ansi import red
+
+        if _args.strip():
+            print(f"  {red('✗')} Unknown command: /tools {_args}")
+            return False
+
         from wool.utils.menu import run_tools_menu
         tools = self.agent.tool_registry.list_tools()
         mcp_tools = self.agent.mcp_manager.get_all_tools()
@@ -391,8 +400,10 @@ class SlashCommandHandler:
     # ── /mcps (interactive) ────────────────────────────────────────────────
     
     async def _mcps_interactive(self, _args: str) -> bool:
+        if _args.strip():
+            return await self._mcp(_args)
+
         from wool.utils.menu import run_mcps_menu
-        from wool.utils.ansi import red
         
         run_mcps_menu(self.agent.config)
         
@@ -497,10 +508,17 @@ class SlashCommandHandler:
                 ansi_error("Usage: /mcp disconnect <name>")
                 return False
             name = parts[1]
+            if name not in self.agent.config.mcp_servers:
+                from wool.utils.ansi import warning
+                warning(f"MCP server '{name}' is not configured.")
+                return False
+                
             await self.agent.mcp_manager.disconnect(name)
             self.agent.config.mcp_servers.pop(name, None)
+            if name in self.agent.config.disabled_mcps:
+                self.agent.config.disabled_mcps.remove(name)
             self.agent.config.save()
-            success(f"Disconnected from '{name}'.")
+            success(f"Disconnected and removed '{name}'.")
 
         else:
             ansi_error("Unknown sub-command.  Try: list, connect, disconnect")
