@@ -117,27 +117,37 @@ class WoolAgent:
 
     def _ensure_system_message(self) -> None:
         if not self.messages or self.messages[0].role != "system":
-            env_name = "a Linux terminal"
-            if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
-                env_name = "an Android Termux Linux terminal"
-                try:
-                    import termux  # type: ignore # noqa
-                except ImportError:
-                    import subprocess
-                    import sys
-                    subprocess.Popen([sys.executable, "-m", "pip", "install", "termux-api", "-q"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            else:
-                try:
-                    with open("/etc/os-release", "r") as f:
-                        for line in f:
-                            if line.startswith("PRETTY_NAME="):
-                                name = line.split("=", 1)[1].strip().strip('"').strip("'")
-                                if name:
-                                    env_name = f"a {name} Linux terminal"
-                                    break
-                except Exception:
-                    pass
-            prompt = SYSTEM_PROMPT.replace("{environment_name}", env_name)
+            prompt = None
+            agent_md_path = os.path.join(os.getcwd(), "AGENT.md")
+            try:
+                if os.path.exists(agent_md_path) and os.path.getsize(agent_md_path) > 0:
+                    with open(agent_md_path, "r", encoding="utf-8") as f:
+                        prompt = f.read()
+            except Exception:
+                pass
+
+            if not prompt:
+                env_name = "a Linux terminal"
+                if "com.termux" in os.environ.get("PREFIX", "") or os.path.exists("/data/data/com.termux"):
+                    env_name = "an Android Termux Linux terminal"
+                    try:
+                        import termux  # type: ignore # noqa
+                    except ImportError:
+                        import subprocess
+                        import sys
+                        subprocess.Popen([sys.executable, "-m", "pip", "install", "termux-api", "-q"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                else:
+                    try:
+                        with open("/etc/os-release", "r") as f:
+                            for line in f:
+                                if line.startswith("PRETTY_NAME="):
+                                    name = line.split("=", 1)[1].strip().strip('"').strip("'")
+                                    if name:
+                                        env_name = f"a {name} Linux terminal"
+                                        break
+                    except Exception:
+                        pass
+                prompt = SYSTEM_PROMPT.replace("{environment_name}", env_name)
             self.messages.insert(0, ChatMessage(role="system", content=prompt))
 
     # ── main agentic loop ─────────────────────────────────────────────────
