@@ -35,6 +35,7 @@ class WoolConfig:
     active_session: str | None = None
     last_session: str | None = None
     mcp_servers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    disabled_mcps: list[str] = field(default_factory=list)
     restrict_workspace: bool = True
     disabled_tools: list[str] = field(default_factory=list)
 
@@ -72,6 +73,7 @@ class WoolConfig:
             active_session=raw.get("active_session"),
             last_session=raw.get("last_session"),
             mcp_servers=raw.get("mcp_servers", {}),
+            disabled_mcps=raw.get("disabled_mcps", []),
             restrict_workspace=raw.get("restrict_workspace", True),
             disabled_tools=raw.get("disabled_tools", []),
         )
@@ -86,6 +88,7 @@ class WoolConfig:
             "active_session": self.active_session,
             "last_session": self.last_session,
             "mcp_servers": self.mcp_servers,
+            "disabled_mcps": self.disabled_mcps,
             "restrict_workspace": self.restrict_workspace,
             "disabled_tools": self.disabled_tools,
         }

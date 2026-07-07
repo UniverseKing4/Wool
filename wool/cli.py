@@ -147,7 +147,11 @@ async def run_repl(resume: bool = False) -> None:
             except Exception as e:
                 print(f"  {red('✗')} Failed to auto-connect MCP '{name}': {e}")
                 
-        tasks = [connect_mcp(name, cfg) for name, cfg in config.mcp_servers.items()]
+        tasks = [
+            connect_mcp(name, cfg) 
+            for name, cfg in config.mcp_servers.items() 
+            if name not in config.disabled_mcps
+        ]
         await asyncio.gather(*tasks)
         
         success(f"Restored {len(agent.mcp_manager.list_servers())} MCP servers.\n")

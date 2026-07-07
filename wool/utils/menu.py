@@ -614,3 +614,123 @@ def run_tools_menu(
 
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def run_mcps_menu(config) -> None:
+    """
+    Renders an interactive menu for MCP servers.
+    Supports toggling servers on/off.
+    """
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+
+    servers = list(config.mcp_servers.keys())
+    selected_idx = 0
+    offset = 0
+
+    try:
+        term_lines = shutil.get_terminal_size().lines
+    except Exception:
+        term_lines = 24
+    max_display = max(5, term_lines - 8)
+
+    def _render(sel: int, off: int) -> list[str]:
+        try:
+            term_width = shutil.get_terminal_size().columns
+        except Exception:
+            term_width = 80
+
+        lines = []
+        lines.append("")
+        lines.append(f"  {bold(magenta('MCP Servers'))}  ")
+        lines.append("")
+        
+        if not servers:
+            lines.append(f"  {dim('No MCP servers configured.')}")
+        else:
+            visible = servers[off : off + max_display]
+            for i, name in enumerate(visible):
+                actual_idx = off + i
+                prefix = "❯" if actual_idx == sel else " "
+                
+                cfg = config.mcp_servers[name]
+                command = cfg.get("command", "")
+                args = " ".join(cfg.get("args", []))
+                desc = f"{command} {args}"
+                
+                is_disabled = name in config.disabled_mcps
+                status = dim("○") if is_disabled else green("●")
+                
+                max_desc_len = max(5, term_width - 40)
+                desc = desc.replace("\n", " ").strip()
+                if len(desc) > max_desc_len:
+                    desc = desc[:max_desc_len - 3] + "..."
+                
+                name_padded = f"{name:<25s}"
+                color_prefix = magenta(prefix) if actual_idx == sel else prefix
+                colored_name = magenta(name_padded) if actual_idx == sel else white(name_padded)
+                if actual_idx == sel:
+                    colored_name = bold(colored_name)
+                
+                lines.append(f"  {color_prefix} {status} {colored_name} {dim(desc)}")
+
+        lines.append("")
+        lines.append(f"  {dim('↑/↓: move   Enter: toggle   q/Esc: exit')}")
+            
+        return lines
+
+    def _draw():
+        lines = _render(selected_idx, offset)
+        for line in lines:
+            sys.stdout.write(f"\r\033[K{line}\r\n")
+        sys.stdout.flush()
+        return len(lines)
+
+    try:
+        tty.setraw(sys.stdin.fileno())
+        num_lines = _draw()
+
+        while True:
+            ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
+
+            if ch == "\x03" or ch.lower() == "q":
+                sys.stdout.write("\r\033[K\r\n")
+                return
+
+            elif ch == "\r" or ch == "\n":
+                if servers:
+                    name = servers[selected_idx]
+                    if name in config.disabled_mcps:
+                        config.disabled_mcps.remove(name)
+                    else:
+                        config.disabled_mcps.append(name)
+                    config.save()
+                
+                sys.stdout.write(f"\r\033[{num_lines}A\033[J")
+                num_lines = _draw()
+
+            elif ch == "\x1b":
+                r, _, _ = select.select([fd], [], [], 0.05)
+                if r:
+                    seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+                    if seq in ("[A", "OA"):  # Up
+                        selected_idx = max(0, selected_idx - 1)
+                        if selected_idx < offset:
+                            offset = selected_idx
+                    elif seq in ("[B", "OB"):  # Down
+                        if servers:
+                            selected_idx = min(len(servers) - 1, selected_idx + 1)
+                            if selected_idx >= offset + max_display:
+                                offset = selected_idx - max_display + 1
+                else:
+                    sys.stdout.write("\r\033[K\r\n")
+                    return
+
+                sys.stdout.write(f"\r\033[{num_lines}A\033[J")
+                num_lines = _draw()
+
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

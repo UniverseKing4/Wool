@@ -63,7 +63,7 @@ class SlashCommandHandler:
             "/continue": self._resume,
             "/tools": self._tools,
             "/mcp": self._mcp,
-            "/mcps": self._mcp,
+            "/mcps": self._mcps_interactive,
             "/usage": self._usage,
             "/context": self._context,
             "/goal": self._goal,
@@ -386,6 +386,30 @@ class SlashCommandHandler:
         mcp_tools = self.agent.mcp_manager.get_all_tools()
         
         run_tools_menu(self.agent.config, tools, mcp_tools)
+        return False
+
+    # ── /mcps (interactive) ────────────────────────────────────────────────
+    
+    async def _mcps_interactive(self, _args: str) -> bool:
+        from wool.utils.menu import run_mcps_menu
+        from wool.utils.ansi import red
+        
+        run_mcps_menu(self.agent.config)
+        
+        # After menu exits, reconcile state
+        disabled = self.agent.config.disabled_mcps
+        active = self.agent.mcp_manager.list_servers()
+        all_mcps = self.agent.config.mcp_servers
+        
+        for name in all_mcps:
+            if name in disabled and name in active:
+                await self.agent.mcp_manager.disconnect(name)
+            elif name not in disabled and name not in active:
+                try:
+                    await self.agent.mcp_manager.connect(name, all_mcps[name])
+                except Exception as e:
+                    print(f"  {red('✗')} Failed to connect MCP '{name}': {e}")
+        
         return False
 
     # ── /mcp ──────────────────────────────────────────────────────────────
