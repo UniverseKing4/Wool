@@ -180,8 +180,10 @@ class WoolAgent:
 
         model = self.active_model or "auto"
 
-        # Collect tool schemas (built-in + MCP).
-        all_schemas = self.tool_registry.get_schemas()
+        all_schemas = [
+            schema for schema in self.tool_registry.get_schemas()
+            if schema.get("function", {}).get("name") not in self.config.disabled_tools
+        ]
         all_schemas.extend(self.mcp_manager.get_all_tools())
 
         for iteration in range(1, MAX_TOOL_ITERATIONS + 1):
@@ -423,6 +425,11 @@ class WoolAgent:
                     args = {}
 
                 tool = self.tool_registry.get(tc.name)
+                
+                if tc.name in self.config.disabled_tools:
+                    res = ToolResult(success=False, output="", error=f"Tool '{tc.name}' is currently disabled by the user.")
+                    self.messages.append(ChatMessage(role="tool", content=res.to_json(), tool_call_id=tc.id, name=tc.name))
+                    return
                 
                 async def stream_cb(chunk: str):
                     await queue.put(("tool_stream", tc.id, chunk))

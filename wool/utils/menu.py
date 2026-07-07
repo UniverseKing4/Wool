@@ -459,3 +459,129 @@ def run_list_menu(
 
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def run_tools_menu(
+    config, built_in_tools: list, mcp_tools: list
+) -> None:
+    """
+    Renders an interactive menu for tools.
+    Supports toggling built-in tools.
+    """
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+
+    active_tab = 0  # 0 for built-in, 1 for MCP
+    tabs = ["Built-in Tools"]
+    if mcp_tools:
+        tabs.append("MCP Tools")
+
+    selected_idx = 0
+
+    def _render(tab: int, sel: int) -> list[str]:
+        lines = []
+        
+        # Tabs header
+        tab_str = ""
+        for i, t in enumerate(tabs):
+            if i == tab:
+                tab_str += f"  {bold(cyan(t))}  "
+            else:
+                tab_str += f"  {dim(t)}  "
+        lines.append(f"\n{tab_str}\n")
+        
+        current_list = built_in_tools if tab == 0 else mcp_tools
+        
+        # List tools
+        if not current_list:
+            lines.append(f"  {dim('No tools available.')}")
+        else:
+            for i, tool in enumerate(current_list):
+                prefix = "❯" if i == sel else " "
+                
+                if tab == 0:
+                    name = tool.name
+                    desc = tool.description[:60]
+                    is_disabled = name in config.disabled_tools
+                    status = dim("○") if is_disabled else green("●")
+                else:
+                    fn = tool.get("function", {})
+                    name = fn.get("name", "?")
+                    desc = fn.get("description", "")[:60]
+                    status = green("●")
+                
+                color_prefix = cyan(prefix) if i == sel else prefix
+                colored_name = cyan(name) if i == sel else white(name)
+                if i == sel:
+                    colored_name = bold(colored_name)
+                
+                lines.append(f"  {color_prefix} {status} {colored_name:<25s} {dim(desc)}")
+
+        lines.append("")
+        if tab == 0:
+            lines.append(f"  {dim('←/→: switch tabs   ↑/↓: move   Enter: toggle   q/Esc: exit')}")
+        else:
+            lines.append(f"  {dim('←/→: switch tabs   ↑/↓: move   q/Esc: exit')}")
+            
+        return lines
+
+    def _draw():
+        lines = _render(active_tab, selected_idx)
+        for line in lines:
+            sys.stdout.write(f"\r\033[K{line}\r\n")
+        sys.stdout.flush()
+        return len(lines)
+
+    try:
+        tty.setraw(sys.stdin.fileno())
+        num_lines = _draw()
+
+        while True:
+            ch = os.read(fd, 1).decode("utf-8", errors="ignore")
+            if not ch:
+                sys.stdout.write("\r\033[K\r\n")
+                return None
+
+            if ch == "\x03" or ch.lower() == "q":
+                sys.stdout.write("\r\033[K\r\n")
+                return
+
+            elif ch == "\r" or ch == "\n":
+                if active_tab == 0 and built_in_tools:
+                    tool = built_in_tools[selected_idx]
+                    if tool.name in config.disabled_tools:
+                        config.disabled_tools.remove(tool.name)
+                    else:
+                        config.disabled_tools.append(tool.name)
+                    config.save()
+                
+                sys.stdout.write(f"\r\033[{num_lines}A")
+                num_lines = _draw()
+
+            elif ch == "\x1b":
+                r, _, _ = select.select([fd], [], [], 0.05)
+                if r:
+                    seq = os.read(fd, 2).decode("utf-8", errors="ignore")
+                    current_list = built_in_tools if active_tab == 0 else mcp_tools
+                    if seq in ("[C", "OC"):  # Right
+                        if len(tabs) > 1 and active_tab == 0:
+                            active_tab = 1
+                            selected_idx = 0
+                    elif seq in ("[D", "OD"):  # Left
+                        if active_tab == 1:
+                            active_tab = 0
+                            selected_idx = 0
+                    elif seq in ("[A", "OA"):  # Up
+                        selected_idx = max(0, selected_idx - 1)
+                    elif seq in ("[B", "OB"):  # Down
+                        if current_list:
+                            selected_idx = min(len(current_list) - 1, selected_idx + 1)
+                else:
+                    sys.stdout.write("\r\033[K\r\n")
+                    return
+
+                sys.stdout.write(f"\r\033[{num_lines}A")
+                num_lines = _draw()
+
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

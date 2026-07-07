@@ -381,20 +381,11 @@ class SlashCommandHandler:
     # ── /tools ────────────────────────────────────────────────────────────
 
     async def _tools(self, _args: str) -> bool:
+        from wool.utils.menu import run_tools_menu
         tools = self.agent.tool_registry.list_tools()
         mcp_tools = self.agent.mcp_manager.get_all_tools()
-        print()
-        print(f"  {bold('Built-in tools')} ({len(tools)}):")
-        for t in tools:
-            print(f"    {green(t.name):>30s}  {dim(t.description[:60])}")
-        if mcp_tools:
-            print(f"\n  {bold('MCP tools')} ({len(mcp_tools)}):")
-            for mcp_t in mcp_tools:
-                fn = mcp_t.get("function", {})
-                print(
-                    f"    {magenta(fn.get('name', '?')):>30s}  {dim(fn.get('description', '')[:60])}"
-                )
-        print()
+        
+        run_tools_menu(self.agent.config, tools, mcp_tools)
         return False
 
     # ── /mcp ──────────────────────────────────────────────────────────────
