@@ -53,8 +53,8 @@ wool › read this codebase and explain the architecture
 ### 🔌 Multi-Provider Support
 Works with **any OpenAI-compatible API** — OpenAI, Anthropic, Google, Groq, Mistral, OpenRouter, local models (Ollama, LM Studio), and more. Switch providers and models on the fly.
 
-### 🛠️ 8 Built-in Tools
-Wool comes with powerful built-in tools that the AI can use autonomously:
+### 🛠️ Built-in Tools & Interactive Management
+Wool comes with 8 powerful built-in tools. But more importantly, **all tools can be dynamically enabled/disabled** without restarting the application via the interactive `/tools` TUI menu.
 
 | Tool | Description |
 |------|-------------|
@@ -66,6 +66,8 @@ Wool comes with powerful built-in tools that the AI can use autonomously:
 | `web_search` | Search the live web via DuckDuckGo |
 | `use_subagent` | Delegate tasks to parallel sub-agents for concurrent execution |
 | `multi_tool_use` | Execute multiple tools concurrently in a single step to bypass limitations |
+
+**Interactive `/tools` Menu:** Run `/tools` to open a dual-tabbed TUI menu (navigate tabs with `←`/`→`, scroll with `↑`/`↓`, toggle with `Enter`). You can disable specific built-in tools or MCP tools on the fly, and the AI will dynamically adapt to the graceful tool degradation. If you run `/tools <args>`, it prints an error as it's purely interactive.
 
 ### 🔗 MCP Protocol Support
 Connect to **any MCP server** — stdio, HTTP/SSE, or Streamable HTTP transports. Full support for authentication headers. Wool launches all connections **in parallel** via `asyncio.gather` for blazing fast boot times.
@@ -81,29 +83,39 @@ wool › /mcp connect exa http https://mcp.exa.ai/mcp -H "Authorization: Bearer 
 wool › /mcps
 ```
 
-**Dual-Mode Commands:** Commands like `/mcps` and `/mcp` share logic intelligently. Run `/mcps` with no arguments to get the interactive TUI menu with live-toggling (syncs states dynamically without a restart), or pass arguments (`/mcps disconnect apify`) to bypass the menu and execute directly.
+**Dual-Mode Commands:** The `/mcp` and `/mcps` commands are hyper-ergonomic. Run `/mcps` with no arguments to get the interactive TUI menu with live-toggling (syncs states dynamically without a restart), or pass arguments (`/mcps disconnect apify`) to bypass the menu and execute the underlying `/mcp` command directly. Both commands seamlessly overlap depending on whether you provide arguments!
+
+### 🎛️ Interactive TUI Menus
+Wool is fully driven by a rich, zero-lag CLI interface without needing a bloated frontend. All these commands open keyboard-navigable interactive menus:
+- `/tools` — Toggle Built-in and MCP tools on/off across tabs.
+- `/mcps` — Toggle MCP servers on/off.
+- `/providers` — Select an AI provider dynamically.
+- `/models` — Select a model from the active provider.
+- `/sessions` — Browse and switch between chat sessions.
+- `/rewind` — Select a previous message in the chat history to rewind the conversation to.
+- `/settings` — Toggle core settings like the Secure Workspace Restriction.
 
 ### 💬 Session Management
-- **Multiple named sessions** — work on different tasks independently
-- **Interactive session menu** — TUI-style browser with keyboard navigation
-- **Fork conversations** — branch a conversation into a new session
-- **Rewind history** — step back to any previous message
-- **Compact history** — AI-powered summarization to reduce context size
+- **Multiple named sessions** — work on different tasks independently (`/new`, `/rename`)
+- **Interactive session menu** — TUI-style browser (`/sessions`)
+- **Fork conversations** — branch a conversation into a new session (`/fork`)
+- **Rewind history** — step back to any previous message interactively (`/rewind`)
+- **Compact history** — AI-powered summarization to reduce context size (`/compact`)
+- **Auto-cleanup** — ghost sessions with no messages are perfectly scrubbed to keep workspaces clean
 
 ### 🧠 Advanced Agent Capabilities
 - **Real-time streaming** — tokens stream live with markdown rendering
 - **Thinking/Reasoning display** — see the model's chain-of-thought in real-time
-- **Goal mode** — set a goal and let Wool work autonomously until complete
+- **Goal mode** — set a goal (`/goal <task>`) and let Wool work autonomously until complete
 - **Parallel subagents** — delegate multiple tasks to run concurrently in the background
-- **Smart context tracking** — detailed token usage and context breakdown
+- **Smart context tracking** — detailed token usage and context breakdown (`/context`, `/usage`)
 - **Zero-lag event loop** — blazing fast, non-blocking I/O ensures the UI never hangs
 - **Atomic persistence** — process-safe, corruption-proof session and configuration saving
-- **Graceful cancellation & teardown** — hit Escape to safely abort LLM generation or tool execution. Unhandled interrupts or shutdowns perfectly terminate all background child processes without leaking orphans.
+- **Graceful cancellation & teardown** — hit Escape (or Ctrl+C) to safely abort LLM generation or tool execution. Unhandled interrupts or shutdowns perfectly terminate all background child processes without leaking orphans.
 - **Graceful Tool Degradation** — If you disable a tool via the interactive menus, Wool elegantly notifies the LLM in-context so it can dynamically adapt without crashing.
-- **Auto-cleanup** — ghost sessions with no messages are perfectly scrubbed to keep workspaces clean
 
 ### 🛡️ Secure Workspace Restrictions
-Strict path validations and regex heuristics confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Fully toggleable via the `/settings` menu.
+Strict path validations and regex heuristics confine the agent perfectly to your current working directory to prevent arbitrary file modifications. Fully toggleable via the interactive `/settings` menu.
 
 ### 📱 Cross-Platform
 Natively supports **all Linux distributions** and **Android Termux**. No hardcoded paths — dynamically adapts to your environment. Native Termux clipboard integration.
